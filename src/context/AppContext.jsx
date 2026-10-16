@@ -108,6 +108,14 @@ export function AppProvider({ children }) {
         set(results[5], setSiteGallery,      'owner_gallery');
         set(results[6], setSiteAchievements, 'owner_achievements');
 
+        // Sync achievement stats (counter cards) — returned alongside achievements
+        if (results[6].status === 'fulfilled') {
+          const stats = results[6].value?.stats;
+          if (Array.isArray(stats) && stats.length) {
+            setSiteStats(stats); persist('owner_stats', stats);
+          }
+        }
+
         // Config
         if (results[7].status === 'fulfilled') {
           const cfg = results[7].value?.data;

@@ -390,6 +390,9 @@ async function renderEnquiries() {
   document.getElementById('content').innerHTML = '<p class="text-muted text-sm" style="padding:1rem">Loading…</p>';
   try {
     const { data } = await api('/contact');
+    // Update sidebar badge with live count of 'new' enquiries
+    const newCount = data.filter(e => e.status === 'new').length;
+    setBadge('nb-eq', newCount);
     document.getElementById('content').innerHTML = `
       <div class="card">
         <div class="card-header"><h3>All Enquiries (${data.length})</h3></div>
@@ -417,6 +420,8 @@ async function renderEnquiries() {
 async function viewEnquiry(id) {
   try {
     const { data: e } = await api('/contact/' + id);
+    // Server auto-marks as 'read' on GET — refresh the list row + badge silently
+    renderEnquiries();
     openModal('Enquiry — ' + esc(e.name), `
       <p class="text-sm mb1"><strong>${esc(e.name)}</strong> · ${esc(e.phone)} · ${esc(e.email) || 'No email'}</p>
       <p class="text-sm text-muted mb1">Service: ${esc(e.service)} · ${fmt(e.createdAt)}</p>
@@ -450,6 +455,9 @@ async function renderMemberships() {
   document.getElementById('content').innerHTML = '<p class="text-muted text-sm" style="padding:1rem">Loading…</p>';
   try {
     const { data } = await api('/membership');
+    // Update sidebar badge with live count of 'pending' memberships
+    const pendingCount = data.filter(m => m.status === 'pending').length;
+    setBadge('nb-ms', pendingCount);
     document.getElementById('content').innerHTML = `
       <div class="card">
         <div class="card-header"><h3>Memberships (${data.length})</h3></div>
@@ -523,6 +531,9 @@ async function renderReviews() {
   try {
     const { data } = await api('/reviews');
     _reviewsCache = data; // cache for viewRev
+    // Update sidebar badge with live count of unapproved reviews
+    const pendingRevCount = data.filter(r => !r.approved).length;
+    setBadge('nb-rv', pendingRevCount);
     document.getElementById('content').innerHTML = `
       <div class="card">
         <div class="card-header"><h3>Reviews (${data.length})</h3></div>

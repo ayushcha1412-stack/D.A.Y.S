@@ -113,3 +113,15 @@ export const getSocials        = ()    => call('/config/socials');
 export const createSocial      = (data)     => call('/config/socials', 'POST', data);
 export const updateSocial      = (id, data) => call(`/config/socials/${id}`, 'PUT', data);
 export const deleteSocial      = (id)       => call(`/config/socials/${id}`, 'DELETE');
+
+// ── Image URL resolver ─────────────────────────────────────────────────────
+// Converts server-relative /uploads/... paths to absolute URLs in production.
+// Imported asset objects (from Vite) are returned unchanged.
+const _ORIGIN = (import.meta.env.VITE_API_URL || '');
+export function resolveImg(img) {
+  if (!img) return null;
+  if (typeof img !== 'string') return img;            // Vite asset object
+  if (img.startsWith('http://') || img.startsWith('https://')) return img;
+  if (img.startsWith('/uploads')) return `${_ORIGIN}${img}`;
+  return img;
+}

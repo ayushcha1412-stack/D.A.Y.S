@@ -71,8 +71,8 @@ const strictLimiter = rateLimit({
 app.use('/api/', apiLimiter);
 app.use('/api/auth/login',         strictLimiter);
 app.use('/api/auth/admin/login',   strictLimiter);
-app.use('/api/enquiries',          strictLimiter);
-app.use('/api/memberships',        strictLimiter);
+app.use('/api/contact',            strictLimiter);   // enquiry submissions
+app.use('/api/membership',         strictLimiter);   // membership registrations
 
 // ── Body parsers ─────────────────────────────────────────
 app.use(express.json({ limit: '10mb' }));

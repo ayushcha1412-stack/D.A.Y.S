@@ -7,12 +7,16 @@ import MysticalCard from '../components/MysticalCard';
 import ImagePlaceholder from '../components/ImagePlaceholder';
 import ParticleSystem from '../components/ParticleSystem';
 import { useApp } from '../context/AppContext';
+import { resolveImg } from '../utils/api';
 import { fadeUp, staggerChildren, scaleIn, pageTransition } from '../utils/animations';
 
 export default function Facilitators() {
   const { siteFacilitators: facilitators, siteContact } = useApp();
   const contactInfo = siteContact;
   const [selected, setSelected] = useState(null);
+
+  // Resolve /uploads/... paths for production
+  const resolvedFacilitators = facilitators.map(f => ({ ...f, image: resolveImg(f.image) }));
 
   const openModal  = (f) => { setSelected(f); document.body.style.overflow = 'hidden'; };
   const closeModal = ()  => { setSelected(null); document.body.style.overflow = ''; };
@@ -50,7 +54,7 @@ export default function Facilitators() {
           viewport={{ once: true }}
           className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8"
         >
-          {facilitators.map((f, i) => (
+          {resolvedFacilitators.map((f, i) => (
             <motion.div key={f.id} variants={fadeUp} transition={{ delay: i * 0.1 }}>
               <MysticalCard className="p-0 overflow-hidden group" hoverLift>
                 {/* Image */}

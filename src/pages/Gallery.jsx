@@ -7,18 +7,20 @@ import SectionDivider from '../components/SectionDivider';
 import ParticleSystem from '../components/ParticleSystem';
 import ImagePlaceholder from '../components/ImagePlaceholder';
 import { useApp } from '../context/AppContext';
+import { resolveImg } from '../utils/api';
 import { fadeUp, staggerChildren, pageTransition } from '../utils/animations';
 
 export default function Gallery() {
-  const { siteGallery, siteFacilitators: facilitators } = useApp();
+  const { siteGallery, siteFacilitators } = useApp();
 
   // Handle both imported image objects (local) and URL strings (MongoDB)
   const galleryItems = siteGallery.map(item => ({
     ...item,
-    image: typeof item.image === 'string'
-      ? (item.image.startsWith('/uploads') ? `http://localhost:5000${item.image}` : item.image)
-      : item.image, // already an imported asset object
+    image: resolveImg(item.image),
   }));
+
+  // Resolve facilitator images for production
+  const facilitators = siteFacilitators.map(f => ({ ...f, image: resolveImg(f.image) }));
   const [lightbox, setLightbox] = useState(null);
 
   const openLightbox  = useCallback((i) => { setLightbox(i); document.body.style.overflow = 'hidden'; }, []);
