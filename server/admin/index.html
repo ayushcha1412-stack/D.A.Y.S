@@ -1,0 +1,1257 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>DAYS Yoga — Admin Dashboard</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#060e09;--surface:#0d1f12;--surface2:#142a18;--border:#1e3a22;
+  --gold:#d4a843;--gold-light:#f5d98b;--cream:#f0e8d0;
+  --red:#c0392b;--text:#c8d8c0;--muted:#6a8870;
+  --radius:10px;--shadow:0 4px 24px rgba(0,0,0,.5);
+}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;display:flex;flex-direction:column}
+a{color:var(--gold);text-decoration:none}
+
+/* Login */
+#login-screen{display:flex;align-items:center;justify-content:center;min-height:100vh;padding:1rem;background:radial-gradient(ellipse 70% 60% at 50% 40%,#0d2618,#020704)}
+.login-card{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:2.5rem;width:100%;max-width:400px;box-shadow:var(--shadow)}
+.login-card h1{color:var(--gold);font-size:1.4rem;margin-bottom:.25rem}
+.login-card p{color:var(--muted);font-size:.85rem;margin-bottom:2rem}
+
+/* Form elements */
+label{display:block;font-size:.78rem;color:var(--muted);margin-bottom:.3rem;text-transform:uppercase;letter-spacing:.06em}
+input,select,textarea{width:100%;padding:.6rem .85rem;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);color:var(--cream);font-size:.88rem;outline:none;transition:border .2s;resize:vertical}
+input:focus,select:focus,textarea:focus{border-color:var(--gold)}
+input[type=checkbox]{width:auto;margin-right:.35rem}
+input[type=file]{padding:.4rem .5rem}
+.form-group{margin-bottom:1rem}
+.err{color:#e74c3c;font-size:.78rem;margin-top:.25rem}
+
+/* Buttons */
+.btn{display:inline-flex;align-items:center;gap:.35rem;padding:.55rem 1.1rem;border:none;border-radius:var(--radius);cursor:pointer;font-size:.83rem;font-weight:600;transition:all .18s}
+.btn-primary{background:var(--gold);color:#000}
+.btn-primary:hover{background:var(--gold-light)}
+.btn-danger{background:var(--red);color:#fff}
+.btn-danger:hover{opacity:.82}
+.btn-ghost{background:transparent;border:1px solid var(--border);color:var(--text)}
+.btn-ghost:hover{border-color:var(--gold);color:var(--gold)}
+.btn-sm{padding:.35rem .7rem;font-size:.76rem}
+.btn-success{background:#115c45;color:#a8f0d0}
+.btn-success:hover{background:#0d4a38}
+
+/* Layout */
+#app{flex:1;display:none;min-height:100vh}
+.layout{display:flex;min-height:100vh}
+
+/* Sidebar */
+#sidebar{width:215px;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;position:sticky;top:0;height:100vh;overflow-y:auto;flex-shrink:0}
+#sidebar .logo{padding:1.2rem 1rem;border-bottom:1px solid var(--border)}
+#sidebar .logo h2{color:var(--gold);font-size:.9rem;font-weight:700}
+#sidebar .logo p{color:var(--muted);font-size:.68rem;margin-top:.15rem}
+#sidebar nav{padding:.5rem 0;flex:1}
+.nav-item{display:flex;align-items:center;gap:.6rem;padding:.6rem 1rem;cursor:pointer;font-size:.83rem;color:var(--muted);transition:all .15s;border-left:3px solid transparent;user-select:none}
+.nav-item:hover{background:var(--surface2);color:var(--text)}
+.nav-item.active{background:var(--surface2);color:var(--gold);border-left-color:var(--gold)}
+.nav-icon{font-size:.95rem;width:18px;text-align:center}
+.nav-badge{margin-left:auto;background:var(--red);color:#fff;border-radius:999px;font-size:.63rem;padding:.1rem .4rem;font-weight:700;min-width:18px;text-align:center}
+.sidebar-footer{padding:.9rem;border-top:1px solid var(--border)}
+
+/* Main */
+#main{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0}
+#topbar{background:var(--surface);border-bottom:1px solid var(--border);padding:.75rem 1.4rem;display:flex;align-items:center;justify-content:space-between;gap:1rem}
+#topbar h1{font-size:1rem;color:var(--cream);font-weight:600;white-space:nowrap}
+#content{flex:1;overflow-y:auto;padding:1.4rem}
+
+/* Stat cards */
+.stat-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:.9rem;margin-bottom:1.8rem}
+.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:1.1rem;position:relative;overflow:hidden;cursor:default}
+.stat-card::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,rgba(212,168,67,.05),transparent);pointer-events:none}
+.stat-card .s-label{font-size:.72rem;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;margin-bottom:.4rem}
+.stat-card .s-value{font-size:1.9rem;font-weight:700;color:var(--gold);line-height:1}
+.s-badge{display:inline-block;background:rgba(192,57,43,.2);color:#e74c3c;border:1px solid rgba(192,57,43,.3);border-radius:999px;font-size:.67rem;padding:.1rem .45rem;margin-top:.3rem}
+
+/* Cards / Tables */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);margin-bottom:1.4rem;overflow:hidden}
+.card-header{padding:.9rem 1.2rem;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:.5rem}
+.card-header h3{font-size:.9rem;color:var(--cream);font-weight:600}
+.card-body{padding:1.2rem}
+.table-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:.81rem}
+th{text-align:left;padding:.5rem .7rem;color:var(--muted);font-size:.72rem;text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid var(--border);white-space:nowrap}
+td{padding:.55rem .7rem;border-bottom:1px solid rgba(30,58,34,.4);vertical-align:middle;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:var(--surface2)}
+
+/* Tags */
+.tag{display:inline-block;padding:.14rem .45rem;border-radius:999px;font-size:.7rem;font-weight:600}
+.tag-new{background:rgba(26,108,168,.2);color:#3498db;border:1px solid rgba(26,108,168,.3)}
+.tag-pending{background:rgba(212,168,67,.15);color:var(--gold);border:1px solid rgba(212,168,67,.25)}
+.tag-active{background:rgba(17,92,69,.3);color:#2ecc71;border:1px solid rgba(17,92,69,.4)}
+.tag-closed,.tag-expired,.tag-cancelled{background:rgba(100,100,100,.2);color:#888;border:1px solid rgba(100,100,100,.25)}
+.tag-read,.tag-replied{background:rgba(30,58,34,.4);color:var(--muted);border:1px solid var(--border)}
+.tag-no{background:rgba(192,57,43,.15);color:#e74c3c;border:1px solid rgba(192,57,43,.25)}
+.tag-yes{background:rgba(17,92,69,.3);color:#2ecc71;border:1px solid rgba(17,92,69,.4)}
+
+/* Modal */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:200;display:flex;align-items:center;justify-content:center;padding:1rem;backdrop-filter:blur(3px)}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:14px;width:100%;max-width:540px;max-height:90vh;overflow-y:auto;box-shadow:var(--shadow)}
+.modal-header{padding:1.1rem 1.4rem;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.modal-header h3{color:var(--cream);font-size:.95rem;font-weight:600}
+.modal-body{padding:1.4rem}
+.modal-footer{padding:.9rem 1.4rem;border-top:1px solid var(--border);display:flex;gap:.6rem;justify-content:flex-end}
+.close-x{background:none;border:none;color:var(--muted);font-size:1.3rem;cursor:pointer;line-height:1;padding:.1rem .3rem}
+.close-x:hover{color:var(--cream)}
+
+/* Toast */
+#toast-wrap{position:fixed;bottom:1.4rem;right:1.4rem;z-index:999;display:flex;flex-direction:column;gap:.45rem}
+.toast{padding:.7rem 1.1rem;border-radius:var(--radius);font-size:.83rem;font-weight:500;animation:toastIn .22s ease;box-shadow:var(--shadow);max-width:300px}
+.toast-ok{background:#0d3d28;color:#a8f0d0;border:1px solid rgba(46,204,113,.25)}
+.toast-err{background:#3d0d0d;color:#f0a8a8;border:1px solid rgba(192,57,43,.35)}
+@keyframes toastIn{from{transform:translateX(110%);opacity:0}to{transform:none;opacity:1}}
+
+/* Misc */
+.avatar{width:36px;height:36px;border-radius:50%;object-fit:cover;border:1px solid var(--border);flex-shrink:0}
+.thumb{width:44px;height:44px;border-radius:8px;object-fit:cover;border:1px solid var(--border)}
+.flex{display:flex}.gap{gap:.6rem}.items-center{align-items:center}.justify-between{justify-content:space-between}
+.text-muted{color:var(--muted)}.text-gold{color:var(--gold)}.text-sm{font-size:.8rem}
+.text-red{color:#e74c3c}.mt1{margin-top:.6rem}.mb1{margin-bottom:.6rem}
+.empty{text-align:center;padding:3rem 1rem;color:var(--muted);font-size:.88rem}
+.mr1{margin-right:.4rem}
+.actions{display:flex;gap:.35rem;align-items:center}
+.divider{border:none;border-top:1px solid var(--border);margin:1rem 0}
+@media(max-width:580px){#sidebar{position:fixed;z-index:100;transform:translateX(-100%)}#sidebar.open{transform:none}}
+</style>
+</head>
+<body>
+
+<!-- Login -->
+<div id="login-screen">
+  <div class="login-card">
+    <h1>DAYS Admin</h1>
+    <p>DIVY ASHISH YOGA SANSTHAN — Dashboard</p>
+    <div class="form-group">
+      <label>Email</label>
+      <input id="l-email" type="email" placeholder="admin@anyogainstitute.org" autocomplete="email"/>
+    </div>
+    <div class="form-group">
+      <label>Password</label>
+      <input id="l-pwd" type="password" placeholder="••••••••" autocomplete="current-password"/>
+      <div id="l-err" class="err"></div>
+    </div>
+    <button class="btn btn-primary" style="width:100%" onclick="doLogin()">Sign In</button>
+  </div>
+</div>
+
+<!-- App -->
+<div id="app">
+  <div class="layout">
+    <!-- Sidebar -->
+    <div id="sidebar">
+      <div class="logo">
+        <h2>DAYS Admin</h2>
+        <p>AN Yoga Institute</p>
+      </div>
+      <nav id="nav">
+        <div class="nav-item active" data-page="dashboard"   onclick="goTo('dashboard')">  <span class="nav-icon">📊</span> Dashboard</div>
+        <div class="nav-item"        data-page="enquiries"   onclick="goTo('enquiries')">  <span class="nav-icon">✉️</span>  Enquiries   <span class="nav-badge" id="nb-eq" style="display:none"></span></div>
+        <div class="nav-item"        data-page="memberships" onclick="goTo('memberships')"><span class="nav-icon">🎫</span> Memberships <span class="nav-badge" id="nb-ms" style="display:none"></span></div>
+        <div class="nav-item"        data-page="reviews"     onclick="goTo('reviews')">    <span class="nav-icon">⭐</span>  Reviews     <span class="nav-badge" id="nb-rv" style="display:none"></span></div>
+        <div class="nav-item"        data-page="facilitators"onclick="goTo('facilitators')"><span class="nav-icon">🧘</span> Facilitators</div>
+        <div class="nav-item"        data-page="gallery"     onclick="goTo('gallery')">    <span class="nav-icon">🖼️</span>  Gallery</div>
+        <div class="nav-item"        data-page="classes"     onclick="goTo('classes')">    <span class="nav-icon">📚</span>  Classes</div>
+        <div class="nav-item"        data-page="plans"       onclick="goTo('plans')">      <span class="nav-icon">💎</span>  Plans</div>
+        <div class="nav-item"        data-page="achievements"onclick="goTo('achievements')"><span class="nav-icon">🏆</span> Achievements</div>
+        <div class="nav-item"        data-page="schedule"    onclick="goTo('schedule')">   <span class="nav-icon">🕐</span>  Schedule</div>
+        <div class="nav-item"        data-page="config"      onclick="goTo('config')">     <span class="nav-icon">⚙️</span>  Site Config</div>
+      </nav>
+      <div class="sidebar-footer">
+        <button class="btn btn-ghost" style="width:100%;font-size:.8rem" onclick="logout()">Sign Out</button>
+      </div>
+    </div>
+
+    <!-- Main -->
+    <div id="main">
+      <div id="topbar">
+        <h1 id="page-title">Dashboard</h1>
+        <span id="admin-name" class="text-muted text-sm"></span>
+      </div>
+      <div id="content"><p class="text-muted" style="padding:2rem">Loading…</p></div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal -->
+<div class="modal-overlay" id="modal" style="display:none" onclick="overlayClose(event)">
+  <div class="modal" onclick="event.stopPropagation()">
+    <div class="modal-header">
+      <h3 id="m-title">—</h3>
+      <button class="close-x" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body" id="m-body"></div>
+    <div class="modal-footer" id="m-footer"></div>
+  </div>
+</div>
+
+<!-- Toasts -->
+<div id="toast-wrap"></div>
+
+<script>
+/* ════════════════════════════════════════
+   STATE
+════════════════════════════════════════ */
+const API = '/api';
+let TOKEN = localStorage.getItem('days_token') || '';
+let editId = null;
+
+/* ════════════════════════════════════════
+   UTILS
+════════════════════════════════════════ */
+function toast(msg, ok = true) {
+  const d = document.createElement('div');
+  d.className = 'toast ' + (ok ? 'toast-ok' : 'toast-err');
+  d.textContent = msg;
+  document.getElementById('toast-wrap').appendChild(d);
+  setTimeout(() => d.remove(), 3600);
+}
+
+async function api(path, method = 'GET', body = null, form = false) {
+  const h = { Authorization: 'Bearer ' + TOKEN };
+  const o = { method, headers: h };
+  if (body && !form) { h['Content-Type'] = 'application/json'; o.body = JSON.stringify(body); }
+  if (body &&  form) { o.body = body; }
+  const r = await fetch(API + path, o);
+  const d = await r.json();
+  if (!r.ok) throw new Error(d.message || 'Error ' + r.status);
+  return d;
+}
+
+const fmt = d => d ? new Date(d).toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'}) : '—';
+const esc = s => String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+
+function tag(s) {
+  const m = {new:'tag-new',pending:'tag-pending',active:'tag-active',closed:'tag-closed',expired:'tag-expired',cancelled:'tag-cancelled',read:'tag-read',replied:'tag-replied'};
+  return `<span class="tag ${m[s]||'tag-new'}">${esc(s)}</span>`;
+}
+
+function openModal(title, body, footer) {
+  document.getElementById('m-title').textContent = title;
+  document.getElementById('m-body').innerHTML = body;
+  document.getElementById('m-footer').innerHTML = footer || `<button class="btn btn-ghost" onclick="closeModal()">Close</button>`;
+  document.getElementById('modal').style.display = 'flex';
+}
+function closeModal() { document.getElementById('modal').style.display = 'none'; editId = null; }
+function overlayClose(e) { if (e.target === document.getElementById('modal')) closeModal(); }
+
+function v(id) { return document.getElementById(id)?.value || ''; }
+function chk(id) { return document.getElementById(id)?.checked; }
+
+/* ════════════════════════════════════════
+   AUTH
+════════════════════════════════════════ */
+async function doLogin() {
+  document.getElementById('l-err').textContent = '';
+  try {
+    const d = await api('/auth/admin/login', 'POST', {
+      email:    document.getElementById('l-email').value.trim(),
+      password: document.getElementById('l-pwd').value,
+    });
+    TOKEN = d.token;
+    localStorage.setItem('days_token', TOKEN);
+    document.getElementById('admin-name').textContent = d.admin.name;
+    show();
+  } catch(e) {
+    document.getElementById('l-err').textContent = e.message;
+  }
+}
+
+document.getElementById('l-pwd').addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
+
+function show() {
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('app').style.display = 'block';
+  goTo('dashboard');
+}
+
+function logout() {
+  TOKEN = '';
+  localStorage.removeItem('days_token');
+  document.getElementById('app').style.display = 'none';
+  document.getElementById('login-screen').style.display = 'flex';
+}
+
+/* ── Auto-login on page load ───────────────────────────
+   FIX: verify that the stored token belongs to an admin
+   (role check) before showing the dashboard.
+──────────────────────────────────────────────────────── */
+if (TOKEN) {
+  api('/auth/me').then(d => {
+    /* Reject if the token is a regular user token */
+    if (!d.user || d.user.role !== 'admin') {
+      TOKEN = '';
+      localStorage.removeItem('days_token');
+      return;
+    }
+    document.getElementById('admin-name').textContent = d.user.name || 'Admin';
+    show();
+  }).catch(() => {
+    TOKEN = '';
+    localStorage.removeItem('days_token');
+  });
+}
+
+/* ════════════════════════════════════════
+   NAVIGATION
+════════════════════════════════════════ */
+const PAGE_TITLES = {
+  dashboard:'Dashboard', enquiries:'Enquiries', memberships:'Memberships',
+  reviews:'Reviews', facilitators:'Facilitators', gallery:'Gallery',
+  classes:'Classes', plans:'Plans', achievements:'Achievements',
+  schedule:'Schedule', config:'Site Config',
+};
+
+function goTo(page) {
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.toggle('active', n.dataset.page === page));
+  document.getElementById('page-title').textContent = PAGE_TITLES[page] || page;
+  const map = {
+    dashboard:renderDashboard, enquiries:renderEnquiries, memberships:renderMemberships,
+    reviews:renderReviews, facilitators:renderFacilitators, gallery:renderGallery,
+    classes:renderClasses, plans:renderPlans, achievements:renderAchievements,
+    schedule:renderSchedule, config:renderConfig,
+  };
+  (map[page] || (() => {}))();
+}
+
+/* ════════════════════════════════════════
+   DASHBOARD
+════════════════════════════════════════ */
+async function renderDashboard() {
+  document.getElementById('content').innerHTML = '<p class="text-muted text-sm" style="padding:1rem">Loading stats…</p>';
+  try {
+    const { data: s } = await api('/config/stats');
+    setBadge('nb-eq', s.newEnquiries);
+    setBadge('nb-ms', s.pendingMemberships);
+    setBadge('nb-rv', s.pendingReviews);
+    document.getElementById('content').innerHTML = `
+      <div class="stat-grid">
+        <div class="stat-card">
+          <div class="s-label">Enquiries</div>
+          <div class="s-value">${s.enquiries}</div>
+          ${s.newEnquiries ? `<div class="s-badge">${s.newEnquiries} new</div>` : ''}
+        </div>
+        <div class="stat-card">
+          <div class="s-label">Memberships</div>
+          <div class="s-value">${s.memberships}</div>
+          ${s.pendingMemberships ? `<div class="s-badge">${s.pendingMemberships} pending</div>` : ''}
+        </div>
+        <div class="stat-card">
+          <div class="s-label">Reviews</div>
+          <div class="s-value">${s.reviews}</div>
+          ${s.pendingReviews ? `<div class="s-badge">${s.pendingReviews} awaiting</div>` : ''}
+        </div>
+        <div class="stat-card">
+          <div class="s-label">Facilitators</div>
+          <div class="s-value">${s.facilitators}</div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header"><h3>Quick Actions</h3></div>
+        <div class="card-body" style="display:flex;flex-wrap:wrap;gap:.6rem">
+          <button class="btn btn-ghost btn-sm" onclick="goTo('enquiries')">✉️ Enquiries</button>
+          <button class="btn btn-ghost btn-sm" onclick="goTo('memberships')">🎫 Registrations</button>
+          <button class="btn btn-ghost btn-sm" onclick="goTo('reviews')">⭐ Reviews</button>
+          <button class="btn btn-ghost btn-sm" onclick="goTo('gallery')">🖼️ Gallery</button>
+          <button class="btn btn-ghost btn-sm" onclick="goTo('facilitators')">🧘 Facilitators</button>
+          <button class="btn btn-ghost btn-sm" onclick="goTo('classes')">📚 Classes</button>
+          <button class="btn btn-ghost btn-sm" onclick="goTo('plans')">💎 Plans</button>
+          <button class="btn btn-ghost btn-sm" onclick="goTo('achievements')">🏆 Achievements</button>
+          <button class="btn btn-ghost btn-sm" onclick="goTo('schedule')">🕐 Schedule</button>
+          <button class="btn btn-ghost btn-sm" onclick="goTo('config')">⚙️ Site Config</button>
+        </div>
+      </div>`;
+  } catch(e) {
+    document.getElementById('content').innerHTML = `<p class="err" style="padding:1rem">${esc(e.message)}</p>`;
+  }
+}
+
+function setBadge(id, n) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  if (n > 0) { el.textContent = n; el.style.display = 'inline-block'; }
+  else el.style.display = 'none';
+}
+
+/* ════════════════════════════════════════
+   ENQUIRIES
+════════════════════════════════════════ */
+async function renderEnquiries() {
+  document.getElementById('content').innerHTML = '<p class="text-muted text-sm" style="padding:1rem">Loading…</p>';
+  try {
+    const { data } = await api('/contact');
+    document.getElementById('content').innerHTML = `
+      <div class="card">
+        <div class="card-header"><h3>All Enquiries (${data.length})</h3></div>
+        <div class="table-wrap"><table>
+          <thead><tr><th>Date</th><th>Name</th><th>Phone</th><th>Service</th><th>Status</th><th>Actions</th></tr></thead>
+          <tbody>${data.length ? data.map(e => `
+            <tr>
+              <td class="text-muted">${fmt(e.createdAt)}</td>
+              <td>${esc(e.name)}</td>
+              <td>${esc(e.phone)}</td>
+              <td class="text-muted">${esc(e.service)}</td>
+              <td>${tag(e.status)}</td>
+              <td class="actions">
+                <button class="btn btn-ghost btn-sm" onclick="viewEnquiry('${e._id}')">View</button>
+                <button class="btn btn-danger btn-sm" onclick="del('/contact','${e._id}',renderEnquiries)">Del</button>
+              </td>
+            </tr>`).join('') : '<tr><td colspan="6" class="empty">No enquiries yet.</td></tr>'}</tbody>
+        </table></div>
+      </div>`;
+  } catch(e) {
+    document.getElementById('content').innerHTML = `<p class="err" style="padding:1rem">${esc(e.message)}</p>`;
+  }
+}
+
+async function viewEnquiry(id) {
+  try {
+    const { data: e } = await api('/contact/' + id);
+    openModal('Enquiry — ' + esc(e.name), `
+      <p class="text-sm mb1"><strong>${esc(e.name)}</strong> · ${esc(e.phone)} · ${esc(e.email) || 'No email'}</p>
+      <p class="text-sm text-muted mb1">Service: ${esc(e.service)} · ${fmt(e.createdAt)}</p>
+      <p class="text-sm mb1" style="white-space:pre-wrap">${esc(e.message)}</p>
+      <hr class="divider"/>
+      <div class="form-group"><label>Status</label>
+        <select id="eq-st">${['new','read','replied','closed'].map(s => `<option value="${s}"${e.status===s?' selected':''}>${s}</option>`).join('')}</select>
+      </div>
+      <div class="form-group"><label>Internal Notes</label>
+        <textarea id="eq-nt" rows="3">${esc(e.notes)}</textarea>
+      </div>`,
+      `<button class="btn btn-primary" onclick="saveEnquiry('${id}')">Save</button>
+       <button class="btn btn-ghost"   onclick="closeModal()">Close</button>`
+    );
+  } catch(e) { toast(e.message, false); }
+}
+
+async function saveEnquiry(id) {
+  try {
+    await api('/contact/' + id, 'PUT', { status: v('eq-st'), notes: v('eq-nt') });
+    toast('Saved ✓');
+    closeModal();
+    renderEnquiries();
+  } catch(e) { toast(e.message, false); }
+}
+
+/* ════════════════════════════════════════
+   MEMBERSHIPS
+════════════════════════════════════════ */
+async function renderMemberships() {
+  document.getElementById('content').innerHTML = '<p class="text-muted text-sm" style="padding:1rem">Loading…</p>';
+  try {
+    const { data } = await api('/membership');
+    document.getElementById('content').innerHTML = `
+      <div class="card">
+        <div class="card-header"><h3>Memberships (${data.length})</h3></div>
+        <div class="table-wrap"><table>
+          <thead><tr><th>Date</th><th>Name</th><th>Phone</th><th>Type</th><th>Level</th><th>Mode</th><th>Status</th><th>Actions</th></tr></thead>
+          <tbody>${data.length ? data.map(m => `
+            <tr>
+              <td class="text-muted">${fmt(m.createdAt)}</td>
+              <td>${esc(m.name)}</td>
+              <td>${esc(m.phone)}</td>
+              <td class="text-gold">${esc(m.membershipType)}</td>
+              <td class="text-muted">${esc(m.level)}</td>
+              <td class="text-muted">${esc(m.mode)}</td>
+              <td>${tag(m.status)}</td>
+              <td class="actions">
+                <button class="btn btn-ghost btn-sm" onclick="viewMembership('${m._id}')">View</button>
+                <button class="btn btn-danger btn-sm" onclick="del('/membership','${m._id}',renderMemberships)">Del</button>
+              </td>
+            </tr>`).join('') : '<tr><td colspan="8" class="empty">No registrations yet.</td></tr>'}</tbody>
+        </table></div>
+      </div>`;
+  } catch(e) {
+    document.getElementById('content').innerHTML = `<p class="err" style="padding:1rem">${esc(e.message)}</p>`;
+  }
+}
+
+async function viewMembership(id) {
+  try {
+    const { data: m } = await api('/membership/' + id);
+    openModal('Membership — ' + esc(m.name), `
+      <p class="text-sm mb1"><strong>${esc(m.name)}</strong> · Age ${m.age} · ${esc(m.gender||'—')} · ${esc(m.phone)}</p>
+      <p class="text-sm text-muted mb1">Email: ${esc(m.email)||'—'} · Mode: ${esc(m.mode)} · Level: ${esc(m.level)}</p>
+      <p class="text-sm mb1">Goals: ${(m.goals||[]).join(', ')||'—'}</p>
+      <p class="text-sm mb1">Type: <strong class="text-gold">${esc(m.membershipType)}</strong> · Registered: ${fmt(m.createdAt)}</p>
+      <hr class="divider"/>
+      <div class="form-group"><label>Status</label>
+        <select id="ms-st">${['pending','active','cancelled','expired'].map(s => `<option value="${s}"${m.status===s?' selected':''}>${s}</option>`).join('')}</select>
+      </div>
+      <div class="form-group"><label>Notes</label>
+        <textarea id="ms-nt" rows="2">${esc(m.notes)}</textarea>
+      </div>`,
+      `<button class="btn btn-primary" onclick="saveMembership('${id}')">Save</button>
+       <button class="btn btn-ghost"   onclick="closeModal()">Close</button>`
+    );
+  } catch(e) { toast(e.message, false); }
+}
+
+async function saveMembership(id) {
+  try {
+    await api('/membership/' + id, 'PUT', { status: v('ms-st'), notes: v('ms-nt') });
+    toast('Saved ✓');
+    closeModal();
+    renderMemberships();
+  } catch(e) { toast(e.message, false); }
+}
+
+/* ════════════════════════════════════════
+   REVIEWS
+   FIX: GET /reviews now uses optionalAuth on the server,
+   so sending the admin Bearer token returns ALL reviews
+   (including unapproved), making viewRev() work correctly
+   for pending reviews.
+════════════════════════════════════════ */
+
+/* Cache the loaded reviews list so viewRev() can look up
+   any review (including unapproved) without a second request */
+let _reviewsCache = [];
+
+async function renderReviews() {
+  document.getElementById('content').innerHTML = '<p class="text-muted text-sm" style="padding:1rem">Loading…</p>';
+  try {
+    const { data } = await api('/reviews');
+    _reviewsCache = data; // cache for viewRev
+    document.getElementById('content').innerHTML = `
+      <div class="card">
+        <div class="card-header"><h3>Reviews (${data.length})</h3></div>
+        <div class="table-wrap"><table>
+          <thead><tr><th>Date</th><th>Name</th><th>Rating</th><th>Category</th><th>Approved</th><th>Actions</th></tr></thead>
+          <tbody>${data.length ? data.map(r => `
+            <tr>
+              <td class="text-muted">${fmt(r.createdAt)}</td>
+              <td>${esc(r.name)}</td>
+              <td>${'⭐'.repeat(r.rating)}</td>
+              <td class="text-muted">${esc(r.category||'—')}</td>
+              <td><span class="tag ${r.approved ? 'tag-yes' : 'tag-no'}">${r.approved ? 'Yes' : 'No'}</span></td>
+              <td class="actions">
+                ${!r.approved ? `<button class="btn btn-success btn-sm mr1" onclick="approveRev('${r._id}')">Approve</button>` : ''}
+                <button class="btn btn-ghost btn-sm mr1" onclick="viewRev('${r._id}')">View</button>
+                <button class="btn btn-danger btn-sm" onclick="del('/reviews','${r._id}',renderReviews)">Del</button>
+              </td>
+            </tr>`).join('') : '<tr><td colspan="6" class="empty">No reviews yet.</td></tr>'}</tbody>
+        </table></div>
+      </div>`;
+  } catch(e) {
+    document.getElementById('content').innerHTML = `<p class="err" style="padding:1rem">${esc(e.message)}</p>`;
+  }
+}
+
+function viewRev(id) {
+  /* Use the cache set by renderReviews — includes unapproved reviews */
+  const rev = _reviewsCache.find(x => x._id === id);
+  if (!rev) { toast('Review not found — please refresh.', false); return; }
+  openModal('Review by ' + esc(rev.name), `
+    <p class="text-sm text-muted mb1">${'⭐'.repeat(rev.rating)} · ${esc(rev.category||'—')} · ${fmt(rev.createdAt)}</p>
+    <p class="text-sm" style="white-space:pre-wrap">${esc(rev.review)}</p>`,
+    `${!rev.approved ? `<button class="btn btn-success mr1" onclick="approveRev('${id}')">Approve</button>` : ''}
+     <button class="btn btn-danger mr1" onclick="del('/reviews','${id}',()=>{closeModal();renderReviews()})">Delete</button>
+     <button class="btn btn-ghost" onclick="closeModal()">Close</button>`
+  );
+}
+
+async function approveRev(id) {
+  try {
+    await api('/reviews/' + id + '/approve', 'PUT');
+    toast('Review approved ✓');
+    closeModal();
+    renderReviews();
+  } catch(e) { toast(e.message, false); }
+}
+
+/* ════════════════════════════════════════
+   FACILITATORS
+════════════════════════════════════════ */
+async function renderFacilitators() {
+  document.getElementById('content').innerHTML = '<p class="text-muted text-sm" style="padding:1rem">Loading…</p>';
+  try {
+    const { data } = await api('/facilitators');
+    document.getElementById('content').innerHTML = `
+      <div class="card">
+        <div class="card-header">
+          <h3>Facilitators (${data.length})</h3>
+          <button class="btn btn-primary btn-sm" onclick="facilitatorForm(null)">+ Add</button>
+        </div>
+        <div class="table-wrap"><table>
+          <thead><tr><th>Photo</th><th>Name</th><th>Title</th><th>Featured</th><th>Active</th><th>Actions</th></tr></thead>
+          <tbody>${data.length ? data.map(f => `
+            <tr>
+              <td>${f.image ? `<img src="${esc(f.image)}" class="avatar" onerror="this.style.opacity='.3'"/>` : '<span style="font-size:1.6rem">🧘</span>'}</td>
+              <td>${esc(f.name)}</td>
+              <td class="text-muted">${esc(f.title)}</td>
+              <td><span class="tag ${f.featured ? 'tag-yes' : 'tag-no'}">${f.featured ? 'Yes' : 'No'}</span></td>
+              <td><span class="tag ${f.isActive ? 'tag-active' : 'tag-closed'}">${f.isActive ? 'Yes' : 'No'}</span></td>
+              <td class="actions">
+                <button class="btn btn-ghost btn-sm"   onclick="facilitatorForm('${f._id}')">Edit</button>
+                <button class="btn btn-ghost btn-sm"   onclick="uploadPhoto('${f._id}')">📷</button>
+                <button class="btn btn-danger btn-sm"  onclick="del('/facilitators','${f._id}',renderFacilitators)">Del</button>
+              </td>
+            </tr>`).join('') : '<tr><td colspan="6" class="empty">No facilitators.</td></tr>'}</tbody>
+        </table></div>
+      </div>`;
+  } catch(e) {
+    document.getElementById('content').innerHTML = `<p class="err" style="padding:1rem">${esc(e.message)}</p>`;
+  }
+}
+
+async function facilitatorForm(id) {
+  let f = {name:'',title:'',qualification:'',experience:'',specialization:[],certifications:[],biography:'',featured:false,isActive:true,order:0,social:{whatsapp:''}};
+  if (id) { try { f = (await api('/facilitators/' + id)).data; } catch(e) { toast(e.message, false); return; } }
+  editId = id;
+  openModal(id ? 'Edit Facilitator' : 'Add Facilitator', `
+    <div class="form-group"><label>Name *</label><input id="ff-name" value="${esc(f.name)}"/></div>
+    <div class="form-group"><label>Title *</label><input id="ff-title" value="${esc(f.title)}"/></div>
+    <div class="form-group"><label>Qualification</label><input id="ff-qual" value="${esc(f.qualification)}"/></div>
+    <div class="form-group"><label>Experience</label><input id="ff-exp" value="${esc(f.experience)}"/></div>
+    <div class="form-group"><label>Specialization (comma-separated)</label><input id="ff-spec" value="${esc((f.specialization||[]).join(', '))}"/></div>
+    <div class="form-group"><label>Certifications (comma-separated)</label><input id="ff-cert" value="${esc((f.certifications||[]).join(', '))}"/></div>
+    <div class="form-group"><label>WhatsApp Number</label><input id="ff-wa" value="${esc((f.social||{}).whatsapp||'')}"/></div>
+    <div class="form-group"><label>Biography</label><textarea id="ff-bio" rows="4">${esc(f.biography)}</textarea></div>
+    <div class="form-group"><label>Display Order</label><input type="number" id="ff-ord" value="${f.order||0}" style="width:90px"/></div>
+    <div style="display:flex;gap:1.5rem;margin-top:.5rem">
+      <label style="cursor:pointer"><input type="checkbox" id="ff-feat" ${f.featured ? 'checked' : ''}/> Featured</label>
+      <label style="cursor:pointer"><input type="checkbox" id="ff-act"  ${f.isActive !== false ? 'checked' : ''}/> Active</label>
+    </div>`,
+    `<button class="btn btn-primary" onclick="saveFacilitator()">Save</button>
+     <button class="btn btn-ghost"   onclick="closeModal()">Cancel</button>`
+  );
+}
+
+async function saveFacilitator() {
+  const b = {
+    name:           v('ff-name'),
+    title:          v('ff-title'),
+    qualification:  v('ff-qual'),
+    experience:     v('ff-exp'),
+    specialization: v('ff-spec').split(',').map(s => s.trim()).filter(Boolean),
+    certifications: v('ff-cert').split(',').map(s => s.trim()).filter(Boolean),
+    social:         { whatsapp: v('ff-wa') },
+    biography:      v('ff-bio'),
+    order:          Number(v('ff-ord')),
+    featured:       chk('ff-feat'),
+    isActive:       chk('ff-act'),
+  };
+  try {
+    editId ? await api('/facilitators/' + editId, 'PUT', b) : await api('/facilitators', 'POST', b);
+    toast('Saved ✓');
+    closeModal();
+    renderFacilitators();
+  } catch(e) { toast(e.message, false); }
+}
+
+function uploadPhoto(id) {
+  openModal('Upload Photo', `
+    <div class="form-group"><label>Image (jpg/png/webp, max 5 MB)</label>
+      <input type="file" id="up-file" accept="image/*"/>
+    </div>`,
+    `<button class="btn btn-primary" onclick="doUpload('/facilitators/${id}/image','up-file',renderFacilitators)">Upload</button>
+     <button class="btn btn-ghost"   onclick="closeModal()">Cancel</button>`
+  );
+}
+
+async function doUpload(endpoint, fileInputId, onDone) {
+  const file = document.getElementById(fileInputId)?.files[0];
+  if (!file) return toast('Select a file first.', false);
+  const fd = new FormData();
+  fd.append('image', file);
+  try {
+    await api(endpoint, 'POST', fd, true);
+    toast('Uploaded ✓');
+    closeModal();
+    onDone();
+  } catch(e) { toast(e.message, false); }
+}
+
+/* ════════════════════════════════════════
+   GALLERY
+════════════════════════════════════════ */
+async function renderGallery() {
+  document.getElementById('content').innerHTML = '<p class="text-muted text-sm" style="padding:1rem">Loading…</p>';
+  try {
+    const { data } = await api('/gallery');
+    document.getElementById('content').innerHTML = `
+      <div class="card">
+        <div class="card-header">
+          <h3>Gallery (${data.length})</h3>
+          <button class="btn btn-primary btn-sm" onclick="galleryForm(null)">+ Upload</button>
+        </div>
+        <div class="table-wrap"><table>
+          <thead><tr><th>Photo</th><th>Title</th><th>Category</th><th>Featured</th><th>Actions</th></tr></thead>
+          <tbody>${data.length ? data.map(g => `
+            <tr>
+              <td><img src="${esc(g.image)}" class="thumb" onerror="this.style.opacity='.2'"/></td>
+              <td>${esc(g.title)}</td>
+              <td class="text-muted">${esc(g.category)}</td>
+              <td><span class="tag ${g.featured ? 'tag-yes' : 'tag-no'}">${g.featured ? 'Yes' : 'No'}</span></td>
+              <td class="actions">
+                <button class="btn btn-ghost btn-sm"  onclick="galleryForm('${g._id}')">Edit</button>
+                <button class="btn btn-danger btn-sm" onclick="del('/gallery','${g._id}',renderGallery)">Del</button>
+              </td>
+            </tr>`).join('') : '<tr><td colspan="5" class="empty">No photos.</td></tr>'}</tbody>
+        </table></div>
+      </div>`;
+  } catch(e) {
+    document.getElementById('content').innerHTML = `<p class="err" style="padding:1rem">${esc(e.message)}</p>`;
+  }
+}
+
+async function galleryForm(id) {
+  let g = {title:'',alt:'',category:'Facilitators',featured:false,order:0};
+  if (id) { try { g = (await api('/gallery/' + id)).data; } catch(e) { toast(e.message, false); return; } }
+  editId = id;
+  openModal(id ? 'Edit Gallery Item' : 'Upload Photo', `
+    <div class="form-group"><label>Title *</label><input id="gf-title" value="${esc(g.title)}"/></div>
+    <div class="form-group"><label>Alt Text</label><input id="gf-alt" value="${esc(g.alt)}"/></div>
+    <div class="form-group"><label>Category</label><input id="gf-cat" value="${esc(g.category)}"/></div>
+    ${!id ? `<div class="form-group"><label>Image *</label><input type="file" id="gf-file" accept="image/*"/></div>` : ''}
+    <div class="form-group"><label>Order</label><input type="number" id="gf-ord" value="${g.order||0}" style="width:90px"/></div>
+    <label style="cursor:pointer"><input type="checkbox" id="gf-feat" ${g.featured ? 'checked' : ''}/> Featured</label>`,
+    `<button class="btn btn-primary" onclick="saveGallery(${!!id})">Save</button>
+     <button class="btn btn-ghost"   onclick="closeModal()">Cancel</button>`
+  );
+}
+
+async function saveGallery(isEdit) {
+  try {
+    const common = {
+      title:    v('gf-title'),
+      alt:      v('gf-alt'),
+      category: v('gf-cat'),
+      order:    Number(v('gf-ord')),
+      featured: chk('gf-feat'),
+    };
+    if (isEdit) {
+      await api('/gallery/' + editId, 'PUT', common);
+    } else {
+      const file = document.getElementById('gf-file')?.files[0];
+      if (!file) return toast('Select an image.', false);
+      const fd = new FormData();
+      Object.entries(common).forEach(([k, val]) => fd.append(k, val));
+      fd.append('image', file);
+      await api('/gallery', 'POST', fd, true);
+    }
+    toast('Saved ✓');
+    closeModal();
+    renderGallery();
+  } catch(e) { toast(e.message, false); }
+}
+
+/* ════════════════════════════════════════
+   CLASSES
+════════════════════════════════════════ */
+async function renderClasses() {
+  document.getElementById('content').innerHTML = '<p class="text-muted text-sm" style="padding:1rem">Loading…</p>';
+  try {
+    const { data } = await api('/classes');
+    document.getElementById('content').innerHTML = `
+      <div class="card">
+        <div class="card-header">
+          <h3>Classes (${data.length})</h3>
+          <button class="btn btn-primary btn-sm" onclick="classForm(null)">+ Add</button>
+        </div>
+        <div class="table-wrap"><table>
+          <thead><tr><th>Icon</th><th>Title</th><th>Category</th><th>Mode</th><th>Price</th><th>Active</th><th>Actions</th></tr></thead>
+          <tbody>${data.length ? data.map(c => `
+            <tr>
+              <td style="font-size:1.3rem">${c.icon||'🧘'}</td>
+              <td>${esc(c.title)}</td>
+              <td class="text-muted">${esc(c.category)}</td>
+              <td class="text-muted">${esc(c.mode)}</td>
+              <td class="text-gold">${esc(c.price)}</td>
+              <td><span class="tag ${c.isActive ? 'tag-active' : 'tag-closed'}">${c.isActive ? 'Yes' : 'No'}</span></td>
+              <td class="actions">
+                <button class="btn btn-ghost btn-sm"  onclick="classForm('${c._id}')">Edit</button>
+                <button class="btn btn-danger btn-sm" onclick="del('/classes','${c._id}',renderClasses)">Del</button>
+              </td>
+            </tr>`).join('') : '<tr><td colspan="7" class="empty">No classes.</td></tr>'}</tbody>
+        </table></div>
+      </div>`;
+  } catch(e) {
+    document.getElementById('content').innerHTML = `<p class="err" style="padding:1rem">${esc(e.message)}</p>`;
+  }
+}
+
+async function classForm(id) {
+  let c = {title:'',category:'Offline',mode:'Group',description:'',price:'',timing:'',icon:'🧘',featured:false,isActive:true,order:0,suitableFor:[],tags:[]};
+  if (id) { try { c = (await api('/classes/' + id)).data; } catch(e) { toast(e.message, false); return; } }
+  editId = id;
+  openModal(id ? 'Edit Class' : 'Add Class', `
+    <div class="form-group"><label>Title *</label><input id="cf-title" value="${esc(c.title)}"/></div>
+    <div class="form-group"><label>Category</label>
+      <select id="cf-cat">
+        <option ${c.category==='Offline'?'selected':''}>Offline</option>
+        <option ${c.category==='Online'?'selected':''}>Online</option>
+      </select>
+    </div>
+    <div class="form-group"><label>Mode</label>
+      <select id="cf-mode">
+        <option ${c.mode==='Group'?'selected':''}>Group</option>
+        <option ${c.mode==='Personal'?'selected':''}>Personal</option>
+      </select>
+    </div>
+    <div class="form-group"><label>Description</label><textarea id="cf-desc" rows="3">${esc(c.description)}</textarea></div>
+    <div class="form-group"><label>Price (display text)</label><input id="cf-price" value="${esc(c.price)}"/></div>
+    <div class="form-group"><label>Timing</label><input id="cf-timing" value="${esc(c.timing)}"/></div>
+    <div class="form-group"><label>Icon (emoji)</label><input id="cf-icon" value="${esc(c.icon)}" style="width:80px"/></div>
+    <div class="form-group"><label>Suitable For (comma-separated)</label><input id="cf-suit" value="${esc((c.suitableFor||[]).join(', '))}"/></div>
+    <div class="form-group"><label>Display Order</label><input type="number" id="cf-ord" value="${c.order||0}" style="width:90px"/></div>
+    <div style="display:flex;gap:1.5rem;margin-top:.5rem">
+      <label style="cursor:pointer"><input type="checkbox" id="cf-feat" ${c.featured ? 'checked' : ''}/> Featured</label>
+      <label style="cursor:pointer"><input type="checkbox" id="cf-act"  ${c.isActive !== false ? 'checked' : ''}/> Active</label>
+    </div>`,
+    `<button class="btn btn-primary" onclick="saveClass()">Save</button>
+     <button class="btn btn-ghost"   onclick="closeModal()">Cancel</button>`
+  );
+}
+
+async function saveClass() {
+  const b = {
+    title:       v('cf-title'),
+    category:    v('cf-cat'),
+    mode:        v('cf-mode'),
+    description: v('cf-desc'),
+    price:       v('cf-price'),
+    timing:      v('cf-timing'),
+    icon:        v('cf-icon'),
+    suitableFor: v('cf-suit').split(',').map(s => s.trim()).filter(Boolean),
+    order:       Number(v('cf-ord')),
+    featured:    chk('cf-feat'),
+    isActive:    chk('cf-act'),
+  };
+  try {
+    editId ? await api('/classes/' + editId, 'PUT', b) : await api('/classes', 'POST', b);
+    toast('Saved ✓');
+    closeModal();
+    renderClasses();
+  } catch(e) { toast(e.message, false); }
+}
+
+/* ════════════════════════════════════════
+   PLANS
+════════════════════════════════════════ */
+async function renderPlans() {
+  document.getElementById('content').innerHTML = '<p class="text-muted text-sm" style="padding:1rem">Loading…</p>';
+  try {
+    const { data } = await api('/plans');
+    document.getElementById('content').innerHTML = `
+      <div class="card">
+        <div class="card-header">
+          <h3>Plans (${data.length})</h3>
+          <button class="btn btn-primary btn-sm" onclick="planForm(null)">+ Add</button>
+        </div>
+        <div class="table-wrap"><table>
+          <thead><tr><th>Name</th><th>Price</th><th>Mode</th><th>Popular</th><th>Active</th><th>Actions</th></tr></thead>
+          <tbody>${data.length ? data.map(p => `
+            <tr>
+              <td>${esc(p.name)}</td>
+              <td class="text-gold">${esc(p.price)}</td>
+              <td class="text-muted">${esc(p.mode)}</td>
+              <td>${p.popular ? '⭐' : '—'}</td>
+              <td><span class="tag ${p.isActive ? 'tag-active' : 'tag-closed'}">${p.isActive ? 'Yes' : 'No'}</span></td>
+              <td class="actions">
+                <button class="btn btn-ghost btn-sm"  onclick="planForm('${p._id}')">Edit</button>
+                <button class="btn btn-danger btn-sm" onclick="del('/plans','${p._id}',renderPlans)">Del</button>
+              </td>
+            </tr>`).join('') : '<tr><td colspan="6" class="empty">No plans.</td></tr>'}</tbody>
+        </table></div>
+      </div>`;
+  } catch(e) {
+    document.getElementById('content').innerHTML = `<p class="err" style="padding:1rem">${esc(e.message)}</p>`;
+  }
+}
+
+async function planForm(id) {
+  let p = {name:'',subtitle:'',price:'',priceDetails:'',duration:'Monthly',mode:'',benefits:[],popular:false,badge:'',cta:'Get Started',color:'forest',isActive:true,order:0};
+  if (id) { try { p = (await api('/plans/' + id)).data; } catch(e) { toast(e.message, false); return; } }
+  editId = id;
+  openModal(id ? 'Edit Plan' : 'Add Plan', `
+    <div class="form-group"><label>Name *</label><input id="pf-name" value="${esc(p.name)}"/></div>
+    <div class="form-group"><label>Subtitle</label><input id="pf-sub" value="${esc(p.subtitle)}"/></div>
+    <div class="form-group"><label>Price *</label><input id="pf-price" value="${esc(p.price)}"/></div>
+    <div class="form-group"><label>Price Details</label><input id="pf-pdet" value="${esc(p.priceDetails)}"/></div>
+    <div class="form-group"><label>Mode</label><input id="pf-mode" value="${esc(p.mode)}"/></div>
+    <div class="form-group"><label>CTA Button Text</label><input id="pf-cta" value="${esc(p.cta)}"/></div>
+    <div class="form-group"><label>Badge (optional)</label><input id="pf-badge" value="${esc(p.badge||'')}"/></div>
+    <div class="form-group"><label>Benefits (one per line)</label><textarea id="pf-ben" rows="5">${esc((p.benefits||[]).join('\n'))}</textarea></div>
+    <div class="form-group"><label>Color Theme</label>
+      <select id="pf-col">${['forest','gold','emerald','bronze'].map(c => `<option value="${c}"${p.color===c?' selected':''}>${c}</option>`).join('')}</select>
+    </div>
+    <div style="display:flex;gap:1.5rem;margin-top:.5rem">
+      <label style="cursor:pointer"><input type="checkbox" id="pf-pop" ${p.popular ? 'checked' : ''}/> Popular</label>
+      <label style="cursor:pointer"><input type="checkbox" id="pf-act" ${p.isActive !== false ? 'checked' : ''}/> Active</label>
+    </div>`,
+    `<button class="btn btn-primary" onclick="savePlan()">Save</button>
+     <button class="btn btn-ghost"   onclick="closeModal()">Cancel</button>`
+  );
+}
+
+async function savePlan() {
+  const b = {
+    name:         v('pf-name'),
+    subtitle:     v('pf-sub'),
+    price:        v('pf-price'),
+    priceDetails: v('pf-pdet'),
+    mode:         v('pf-mode'),
+    cta:          v('pf-cta'),
+    badge:        v('pf-badge') || null,
+    benefits:     v('pf-ben').split('\n').map(s => s.trim()).filter(Boolean),
+    color:        v('pf-col'),
+    popular:      chk('pf-pop'),
+    isActive:     chk('pf-act'),
+  };
+  try {
+    editId ? await api('/plans/' + editId, 'PUT', b) : await api('/plans', 'POST', b);
+    toast('Saved ✓');
+    closeModal();
+    renderPlans();
+  } catch(e) { toast(e.message, false); }
+}
+
+/* ════════════════════════════════════════
+   ACHIEVEMENTS
+   Added: Achievement Stats CRUD panel (was missing entirely).
+   Stats are the counter cards shown on the public site
+   e.g. "500+ Students", "10+ Years".
+════════════════════════════════════════ */
+async function renderAchievements() {
+  document.getElementById('content').innerHTML = '<p class="text-muted text-sm" style="padding:1rem">Loading…</p>';
+  try {
+    const { data, stats } = await api('/achievements');
+    document.getElementById('content').innerHTML = `
+      <!-- Achievement items -->
+      <div class="card">
+        <div class="card-header">
+          <h3>Achievements (${data.length})</h3>
+          <button class="btn btn-primary btn-sm" onclick="achieveForm(null)">+ Add</button>
+        </div>
+        <div class="table-wrap"><table>
+          <thead><tr><th>Icon</th><th>Title</th><th>Level</th><th>Year</th><th>Position</th><th>Active</th><th>Actions</th></tr></thead>
+          <tbody>${data.length ? data.map(a => `
+            <tr>
+              <td style="font-size:1.3rem">${a.icon||'🏆'}</td>
+              <td>${esc(a.title)}</td>
+              <td class="text-muted">${esc(a.level)}</td>
+              <td class="text-muted">${esc(a.year)}</td>
+              <td class="text-muted">${esc(a.position)}</td>
+              <td><span class="tag ${a.isActive ? 'tag-active' : 'tag-closed'}">${a.isActive ? 'Yes' : 'No'}</span></td>
+              <td class="actions">
+                <button class="btn btn-ghost btn-sm"  onclick="achieveForm('${a._id}')">Edit</button>
+                <button class="btn btn-danger btn-sm" onclick="del('/achievements','${a._id}',renderAchievements)">Del</button>
+              </td>
+            </tr>`).join('') : '<tr><td colspan="7" class="empty">No achievements.</td></tr>'}</tbody>
+        </table></div>
+      </div>
+
+      <!-- Achievement stats (counter cards shown on public site) -->
+      <div class="card">
+        <div class="card-header">
+          <h3>Achievement Stats / Counters (${(stats||[]).length})</h3>
+          <button class="btn btn-primary btn-sm" onclick="statForm(null)">+ Add Stat</button>
+        </div>
+        <div class="table-wrap"><table>
+          <thead><tr><th>Icon</th><th>Value</th><th>Label</th><th>Order</th><th>Actions</th></tr></thead>
+          <tbody>${(stats||[]).length ? (stats||[]).map(s => `
+            <tr>
+              <td style="font-size:1.3rem">${s.icon||'📊'}</td>
+              <td class="text-gold">${esc(s.value)}</td>
+              <td>${esc(s.label)}</td>
+              <td class="text-muted">${s.order}</td>
+              <td class="actions">
+                <button class="btn btn-ghost btn-sm"  onclick="statForm('${s._id}')">Edit</button>
+                <button class="btn btn-danger btn-sm" onclick="del('/achievements/stats','${s._id}',renderAchievements)">Del</button>
+              </td>
+            </tr>`).join('') : '<tr><td colspan="5" class="empty">No stats yet.</td></tr>'}</tbody>
+        </table></div>
+      </div>`;
+  } catch(e) {
+    document.getElementById('content').innerHTML = `<p class="err" style="padding:1rem">${esc(e.message)}</p>`;
+  }
+}
+
+async function achieveForm(id) {
+  let a = {title:'',level:'State',year:'',location:'',position:'',description:'',icon:'🏆',type:'Competition',isActive:true,order:0};
+  if (id) { try { a = (await api('/achievements/' + id)).data; } catch(e) { toast(e.message, false); return; } }
+  editId = id;
+  const levels = ['District','State','National','Championship','Certification','Judge / Observer'];
+  openModal(id ? 'Edit Achievement' : 'Add Achievement', `
+    <div class="form-group"><label>Title *</label><input id="af-title" value="${esc(a.title)}"/></div>
+    <div class="form-group"><label>Level *</label>
+      <select id="af-level">${levels.map(l => `<option${a.level===l?' selected':''}>${l}</option>`).join('')}</select>
+    </div>
+    <div class="form-group"><label>Year *</label><input id="af-year" value="${esc(a.year)}"/></div>
+    <div class="form-group"><label>Location / Organisation</label><input id="af-loc" value="${esc(a.location)}"/></div>
+    <div class="form-group"><label>Position / Rank</label><input id="af-pos" value="${esc(a.position)}"/></div>
+    <div class="form-group"><label>Description</label><textarea id="af-desc" rows="3">${esc(a.description)}</textarea></div>
+    <div class="form-group"><label>Icon (emoji)</label><input id="af-icon" value="${esc(a.icon)}" style="width:80px"/></div>
+    <div class="form-group"><label>Display Order</label><input type="number" id="af-ord" value="${a.order||0}" style="width:90px"/></div>
+    <label style="cursor:pointer"><input type="checkbox" id="af-act" ${a.isActive !== false ? 'checked' : ''}/> Active</label>`,
+    `<button class="btn btn-primary" onclick="saveAchieve()">Save</button>
+     <button class="btn btn-ghost"   onclick="closeModal()">Cancel</button>`
+  );
+}
+
+async function saveAchieve() {
+  const b = {
+    title:       v('af-title'),
+    level:       v('af-level'),
+    year:        v('af-year'),
+    location:    v('af-loc'),
+    position:    v('af-pos'),
+    description: v('af-desc'),
+    icon:        v('af-icon'),
+    order:       Number(v('af-ord')),
+    isActive:    chk('af-act'),
+  };
+  try {
+    editId ? await api('/achievements/' + editId, 'PUT', b) : await api('/achievements', 'POST', b);
+    toast('Saved ✓');
+    closeModal();
+    renderAchievements();
+  } catch(e) { toast(e.message, false); }
+}
+
+/* ── Achievement Stat form ───────────────────────────── */
+async function statForm(id) {
+  let s = {label:'',value:'',icon:'📊',order:0};
+  if (id) {
+    try {
+      const all = (await api('/achievements/stats')).data;
+      s = all.find(x => x._id === id) || s;
+    } catch(e) { toast(e.message, false); return; }
+  }
+  editId = id;
+  openModal(id ? 'Edit Stat' : 'Add Stat', `
+    <div class="form-group"><label>Value * (e.g. 500+)</label><input id="st-val" value="${esc(s.value)}" placeholder="500+"/></div>
+    <div class="form-group"><label>Label * (e.g. Students Trained)</label><input id="st-label" value="${esc(s.label)}" placeholder="Students Trained"/></div>
+    <div class="form-group"><label>Icon (emoji)</label><input id="st-icon" value="${esc(s.icon)}" style="width:80px"/></div>
+    <div class="form-group"><label>Display Order</label><input type="number" id="st-ord" value="${s.order||0}" style="width:90px"/></div>`,
+    `<button class="btn btn-primary" onclick="saveStat()">Save</button>
+     <button class="btn btn-ghost"   onclick="closeModal()">Cancel</button>`
+  );
+}
+
+async function saveStat() {
+  const b = {
+    value: v('st-val'),
+    label: v('st-label'),
+    icon:  v('st-icon'),
+    order: Number(v('st-ord')),
+  };
+  try {
+    editId
+      ? await api('/achievements/stats/' + editId, 'PUT', b)
+      : await api('/achievements/stats', 'POST', b);
+    toast('Saved ✓');
+    closeModal();
+    renderAchievements();
+  } catch(e) { toast(e.message, false); }
+}
+
+/* ════════════════════════════════════════
+   SCHEDULE
+   Schedule uses a client-side cache to avoid fetching the
+   full list a second time when the edit form is opened.
+════════════════════════════════════════ */
+let _scheduleCache = [];
+
+async function renderSchedule() {
+  document.getElementById('content').innerHTML = '<p class="text-muted text-sm" style="padding:1rem">Loading…</p>';
+  try {
+    const { data } = await api('/schedule');
+    _scheduleCache = data;
+    document.getElementById('content').innerHTML = `
+      <div class="card">
+        <div class="card-header">
+          <h3>Schedule Slots (${data.length})</h3>
+          <button class="btn btn-primary btn-sm" onclick="scheduleForm(null)">+ Add</button>
+        </div>
+        <div class="table-wrap"><table>
+          <thead><tr><th>Time</th><th>Session</th><th>Type</th><th>Period</th><th>Duration</th><th>Active</th><th>Actions</th></tr></thead>
+          <tbody>${data.length ? data.map(s => `
+            <tr>
+              <td class="text-gold">${esc(s.time)}</td>
+              <td>${esc(s.session)}</td>
+              <td class="text-muted">${esc(s.type)}</td>
+              <td class="text-muted">${esc(s.period)}</td>
+              <td class="text-muted">${esc(s.duration)}</td>
+              <td><span class="tag ${s.isActive ? 'tag-active' : 'tag-closed'}">${s.isActive ? 'Yes' : 'No'}</span></td>
+              <td class="actions">
+                <button class="btn btn-ghost btn-sm"  onclick="scheduleForm('${s._id}')">Edit</button>
+                <button class="btn btn-danger btn-sm" onclick="del('/schedule','${s._id}',renderSchedule)">Del</button>
+              </td>
+            </tr>`).join('') : '<tr><td colspan="7" class="empty">No slots.</td></tr>'}</tbody>
+        </table></div>
+      </div>`;
+  } catch(e) {
+    document.getElementById('content').innerHTML = `<p class="err" style="padding:1rem">${esc(e.message)}</p>`;
+  }
+}
+
+function scheduleForm(id) {
+  /* Use cache — no second network call needed */
+  let s = _scheduleCache.find(x => x._id === id) ||
+          {time:'',session:'',type:'Group',mode:'Offline',description:'',period:'morning',duration:'60 min',suitable:'All levels',isActive:true,order:0};
+  editId = id;
+  openModal(id ? 'Edit Slot' : 'Add Slot', `
+    <div class="form-group"><label>Time * (e.g. 05:30 AM)</label><input id="sf-time" value="${esc(s.time)}"/></div>
+    <div class="form-group"><label>Session Name *</label><input id="sf-sess" value="${esc(s.session)}"/></div>
+    <div class="form-group"><label>Type</label><input id="sf-type" value="${esc(s.type)}"/></div>
+    <div class="form-group"><label>Mode</label><input id="sf-mode" value="${esc(s.mode)}"/></div>
+    <div class="form-group"><label>Period</label>
+      <select id="sf-per">
+        <option value="morning" ${s.period==='morning'?'selected':''}>Morning</option>
+        <option value="evening" ${s.period==='evening'?'selected':''}>Evening</option>
+        <option value="night"   ${s.period==='night'  ?'selected':''}>Night</option>
+      </select>
+    </div>
+    <div class="form-group"><label>Duration</label><input id="sf-dur" value="${esc(s.duration)}"/></div>
+    <div class="form-group"><label>Suitable For</label><input id="sf-suit" value="${esc(s.suitable)}"/></div>
+    <div class="form-group"><label>Description</label><textarea id="sf-desc" rows="2">${esc(s.description)}</textarea></div>
+    <div class="form-group"><label>Display Order</label><input type="number" id="sf-ord" value="${s.order||0}" style="width:90px"/></div>
+    <label style="cursor:pointer"><input type="checkbox" id="sf-act" ${s.isActive !== false ? 'checked' : ''}/> Active</label>`,
+    `<button class="btn btn-primary" onclick="saveSchedule()">Save</button>
+     <button class="btn btn-ghost"   onclick="closeModal()">Cancel</button>`
+  );
+}
+
+async function saveSchedule() {
+  const b = {
+    time:        v('sf-time'),
+    session:     v('sf-sess'),
+    type:        v('sf-type'),
+    mode:        v('sf-mode'),
+    period:      v('sf-per'),
+    duration:    v('sf-dur'),
+    suitable:    v('sf-suit'),
+    description: v('sf-desc'),
+    order:       Number(v('sf-ord')),
+    isActive:    chk('sf-act'),
+  };
+  try {
+    editId ? await api('/schedule/' + editId, 'PUT', b) : await api('/schedule', 'POST', b);
+    toast('Saved ✓');
+    closeModal();
+    renderSchedule();
+  } catch(e) { toast(e.message, false); }
+}
+
+/* ════════════════════════════════════════
+   SITE CONFIG
+════════════════════════════════════════ */
+async function renderConfig() {
+  document.getElementById('content').innerHTML = '<p class="text-muted text-sm" style="padding:1rem">Loading…</p>';
+  try {
+    const { data } = await api('/config');
+    document.getElementById('content').innerHTML = `
+      <div class="card">
+        <div class="card-header"><h3>Site Configuration</h3></div>
+        <div class="card-body">
+          <div class="form-group"><label>Site Name</label><input id="cg-name" value="${esc(data.siteName)}"/></div>
+          <div class="form-group"><label>Tagline</label><input id="cg-tag" value="${esc(data.tagline)}"/></div>
+          <div class="form-group"><label>Phone(s) (comma-separated)</label><input id="cg-phones" value="${esc((data.phones||[]).join(', '))}"/></div>
+          <div class="form-group"><label>WhatsApp Number</label><input id="cg-wa" value="${esc(data.whatsapp)}"/></div>
+          <div class="form-group"><label>Website URL</label><input id="cg-web" value="${esc(data.website)}"/></div>
+          <button class="btn btn-primary" onclick="saveConfig()">Save Changes</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <h3>Social Links</h3>
+          <button class="btn btn-primary btn-sm" onclick="socialForm(null)">+ Add</button>
+        </div>
+        <div class="table-wrap"><table>
+          <thead><tr><th>Label</th><th>URL</th><th>Active</th><th>Actions</th></tr></thead>
+          <tbody>${(data.socials||[]).length ? (data.socials||[]).map(s => `
+            <tr>
+              <td>${esc(s.label)}</td>
+              <td class="text-muted" style="max-width:180px">${esc(s.href)}</td>
+              <td><span class="tag ${s.isActive ? 'tag-active' : 'tag-closed'}">${s.isActive ? 'Yes' : 'No'}</span></td>
+              <td class="actions">
+                <button class="btn btn-ghost btn-sm"  onclick="socialForm('${s._id}')">Edit</button>
+                <button class="btn btn-danger btn-sm" onclick="del('/config/socials','${s._id}',renderConfig)">Del</button>
+              </td>
+            </tr>`).join('') : '<tr><td colspan="4" class="empty">No social links.</td></tr>'}
+          </tbody>
+        </table></div>
+      </div>`;
+  } catch(e) {
+    document.getElementById('content').innerHTML = `<p class="err" style="padding:1rem">${esc(e.message)}</p>`;
+  }
+}
+
+async function saveConfig() {
+  const b = {
+    siteName: v('cg-name'),
+    tagline:  v('cg-tag'),
+    phones:   v('cg-phones').split(',').map(s => s.trim()).filter(Boolean),
+    whatsapp: v('cg-wa'),
+    website:  v('cg-web'),
+  };
+  try {
+    await api('/config', 'PUT', b);
+    toast('Config saved ✓');
+  } catch(e) { toast(e.message, false); }
+}
+
+async function socialForm(id) {
+  let s = {label:'',href:'',color:'#ffffff',order:0,isActive:true};
+  if (id) {
+    try {
+      const all = (await api('/config/socials')).data;
+      s = all.find(x => x._id === id) || s;
+    } catch(e) { toast(e.message, false); return; }
+  }
+  editId = id;
+  openModal(id ? 'Edit Social Link' : 'Add Social Link', `
+    <div class="form-group"><label>Label *</label><input id="sl-label" value="${esc(s.label)}" placeholder="e.g. Instagram"/></div>
+    <div class="form-group"><label>URL *</label><input id="sl-href" value="${esc(s.href)}" placeholder="https://…"/></div>
+    <div class="form-group"><label>Brand Color (hex)</label>
+      <input id="sl-color" type="color" value="${esc(s.color)}" style="width:70px;height:36px;padding:2px"/>
+    </div>
+    <div class="form-group"><label>Display Order</label><input type="number" id="sl-ord" value="${s.order||0}" style="width:90px"/></div>
+    <label style="cursor:pointer"><input type="checkbox" id="sl-act" ${s.isActive !== false ? 'checked' : ''}/> Active</label>`,
+    `<button class="btn btn-primary" onclick="saveSocial()">Save</button>
+     <button class="btn btn-ghost"   onclick="closeModal()">Cancel</button>`
+  );
+}
+
+async function saveSocial() {
+  const b = {
+    label:    v('sl-label'),
+    href:     v('sl-href'),
+    color:    v('sl-color'),
+    order:    Number(v('sl-ord')),
+    isActive: chk('sl-act'),
+  };
+  try {
+    editId ? await api('/config/socials/' + editId, 'PUT', b) : await api('/config/socials', 'POST', b);
+    toast('Saved ✓');
+    closeModal();
+    renderConfig();
+  } catch(e) { toast(e.message, false); }
+}
+
+/* ════════════════════════════════════════
+   SHARED DELETE
+════════════════════════════════════════ */
+function del(endpoint, id, onDone) {
+  if (!confirm('Delete this item? This cannot be undone.')) return;
+  api(endpoint + '/' + id, 'DELETE')
+    .then(() => { toast('Deleted ✓'); if (typeof onDone === 'function') onDone(); })
+    .catch(e => toast(e.message, false));
+}
+</script>
+</body>
+</html>
