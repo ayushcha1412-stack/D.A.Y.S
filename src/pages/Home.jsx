@@ -8,10 +8,11 @@ import MysticalCard from '../components/MysticalCard';
 import ParticleSystem from '../components/ParticleSystem';
 import AnimatedCounter from '../components/AnimatedCounter';
 import MeditationModeButton from '../components/MeditationModeButton';
-import { fadeUp, staggerChildren, slideLeft, slideRight, scaleIn } from '../utils/animations';
+import { fadeUp, staggerChildren, scaleIn } from '../utils/animations';
 import InnerBalanceWheel from '../components/InnerBalanceWheel';
+import { useApp } from '../context/AppContext';
 
-// ── Services overview data ──────────────────────────────────────────────────
+// ── Services overview cards (generic descriptions — static by design) ───────
 const services = [
   { icon: '🧘', title: 'Yoga Training',        desc: 'Basic to advanced yogasana for all levels' },
   { icon: '🏆', title: 'Yogasana Sports',      desc: 'Competition preparation & sports training' },
@@ -21,7 +22,7 @@ const services = [
   { icon: '🥇', title: 'Competition Training', desc: 'District to national level preparation' },
 ];
 
-// ── What You Will Learn ─────────────────────────────────────────────────────
+// ── What You Will Learn (static curriculum — no admin control needed) ────────
 const learningCards = [
   { icon: '🧘', title: 'Yogasana Practice',    desc: 'Basic to advanced yogasanas with proper alignment and breath awareness.' },
   { icon: '💨', title: 'Pranayama',            desc: 'Ancient breathing techniques to regulate prana and calm the mind.' },
@@ -33,15 +34,24 @@ const learningCards = [
   { icon: '🏆', title: 'Yogasana Sports',      desc: 'Competition-level training aligned with national federation standards.' },
 ];
 
-// ── Stats ───────────────────────────────────────────────────────────────────
-const stats = [
-  { value: '11',   suffix: '+', label: 'Years Experience',    icon: '📅' },
-  { value: '1000', suffix: '+', label: 'Students Trained',    icon: '🧘' },
-  { value: '500',  suffix: '+', label: 'Competitions',        icon: '🏆' },
-  { value: '100',  suffix: '+', label: 'Certifications',      icon: '📜' },
+// ── Fallback stats shown when backend is offline ─────────────────────────────
+const fallbackStats = [
+  { value: '11+',   label: 'Years Experience', icon: '📅' },
+  { value: '1000+', label: 'Students Trained', icon: '🧘' },
+  { value: '500+',  label: 'Competitions',     icon: '🏆' },
+  { value: '100+',  label: 'Certifications',   icon: '📜' },
 ];
 
 export default function Home() {
+  // ── Live data from admin dashboard ─────────────────────────────────────────
+  const { siteStats, siteReviews } = useApp();
+
+  // Use live stats seeded via admin; fall back to static defaults if DB is empty
+  const stats = (siteStats && siteStats.length > 0) ? siteStats : fallbackStats;
+
+  // Pick first approved review for the testimonial snippet
+  const featuredReview = siteReviews?.find(r => r.approved !== false) ?? null;
+
   const heroRef = useRef(null);
   const { scrollYProgress } = useScroll({ target: heroRef, offset: ['start start', 'end start'] });
 
@@ -321,7 +331,13 @@ export default function Home() {
         <div className="max-w-5xl mx-auto px-4 sm:px-6">
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-8">
             {stats.map((s, i) => (
-              <AnimatedCounter key={i} value={s.value} suffix={s.suffix} label={s.label} icon={s.icon} />
+              <AnimatedCounter
+                key={i}
+                value={s.value}
+                suffix={s.suffix || ''}
+                label={s.label}
+                icon={s.icon}
+              />
             ))}
           </div>
         </div>
@@ -473,13 +489,23 @@ export default function Home() {
           >
             <div className="flex justify-center gap-1 mb-5">
               {[1,2,3,4,5].map((s) => (
-                <Star key={s} size={18} className="text-gold fill-gold" />
+                <Star
+                  key={s}
+                  size={18}
+                  className={`${featuredReview && s <= (featuredReview.rating || 5) ? 'text-gold fill-gold' : 'text-gold/30'}`}
+                />
               ))}
             </div>
             <p className="text-cream/70 text-base sm:text-lg italic leading-relaxed font-serif">
-              "Yoga at DIVY ASHISH YOGA SANSTHAN has truly transformed my life — better health, inner peace and a wonderful community."
+              {featuredReview
+                ? `"${featuredReview.review}"`
+                : '"Yoga at DIVY ASHISH YOGA SANSTHAN has truly transformed my life — better health, inner peace and a wonderful community."'}
             </p>
-            <p className="text-gold/60 text-sm mt-5 font-medium">— Satisfied Student, Lucknow</p>
+            <p className="text-gold/60 text-sm mt-5 font-medium">
+              {featuredReview
+                ? `— ${featuredReview.name}${featuredReview.category ? `, ${featuredReview.category}` : ''}`
+                : '— Satisfied Student, Lucknow'}
+            </p>
           </motion.div>
           <motion.div
             variants={fadeUp}
