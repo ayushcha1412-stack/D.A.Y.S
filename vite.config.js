@@ -2,6 +2,10 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 
 export default defineConfig({
+  // GitHub Pages deploys to https://username.github.io/REPO-NAME/
+  // The base must match the repo name exactly.
+  base: '/D.A.Y.S/',
+
   plugins: [react()],
   resolve: {
     alias: { '@': '/src' },
@@ -17,5 +21,9 @@ export default defineConfig({
         changeOrigin: true,
       },
     },
+  },
+  build: {
+    outDir: 'dist',
+    sourcemap: false,
   },
 })
