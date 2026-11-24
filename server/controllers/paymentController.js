@@ -28,13 +28,24 @@ const UPI_NAME     = process.env.UPI_NAME     || 'DAYS Yoga Sansthan';
 const QR_TTL_SECS  = parseInt(process.env.PAYMENT_TTL_SECONDS || '60', 10);
 
 // ── Plan catalogue — single source of truth for prices ───────────────────────
+// Session plans include session fee + ₹567 annual registration.
+// Trial plans are standalone (no annual fee added).
 const PLAN_PRICES = {
+  // Regular session plans (session + ₹567 annual registration = total)
+  'session-1': { label: 'Group Yoga at Center',        mode: 'Offline Group',        duration: 'Monthly', rupees: 2789 },
+  'session-2': { label: 'Personal Yoga at Center',     mode: 'Offline Personal',     duration: 'Monthly', rupees: 7233 },
+  'session-3': { label: 'Online Group Yoga',           mode: 'Online',               duration: 'Monthly', rupees: 2455 },
+  'session-4': { label: 'Personal Yoga at Home',       mode: 'Online/Home',          duration: 'Monthly', rupees: 10566 },
+  'session-5': { label: 'Student Wellness Plan',       mode: 'Offline / Online',     duration: 'Monthly', rupees: 1066 },
+  'session-6': { label: 'Park Yoga',                   mode: 'Outdoor Group',        duration: 'Monthly', rupees: 1344 },
+  // Trial / introductory sessions (standalone fee)
   'park-group':      { label: 'Park Group Yoga (Trial)',          mode: 'Outdoor',  duration: '5 Days', rupees: 99   },
   'online-group':    { label: 'Online Group Yoga (Trial)',        mode: 'Online',   duration: '4 Days', rupees: 149  },
   'centre-group':    { label: 'Centre Group Yoga (Trial)',        mode: 'Offline',  duration: '5 Days', rupees: 199  },
   'online-personal': { label: 'Online Personal Yoga (Trial)',     mode: 'Online',   duration: '4 Days', rupees: 499  },
   'centre-personal': { label: 'Centre Personal Yoga (Trial)',     mode: 'Offline',  duration: '4 Days', rupees: 999  },
   'home-personal':   { label: 'Home Visit Personal Yoga (Trial)', mode: 'Home',     duration: '4 Days', rupees: 1499 },
+  // Annual registration only
   'annual':          { label: 'Annual Registration',              mode: 'All',      duration: '1 Year', rupees: 567  },
 };
 
