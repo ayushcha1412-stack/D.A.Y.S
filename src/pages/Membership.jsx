@@ -386,14 +386,14 @@ export default function Membership() {
           initial="hidden"
           whileInView="visible"
           viewport={{ once: true }}
-          className="grid grid-cols-1 sm:grid-cols-2 gap-5"
+          className="flex justify-center"
         >
           {MEMBERSHIP_TYPES.map((type, i) => (
             <motion.div
               key={type.id}
               variants={fadeUp}
               transition={{ delay: i * 0.1 }}
-              className="relative rounded-2xl border border-gold/20 overflow-hidden group hover:border-gold/50 transition-all duration-300"
+              className="relative rounded-2xl border border-gold/20 overflow-hidden group hover:border-gold/50 transition-all duration-300 w-full max-w-sm"
               style={{ background: 'linear-gradient(135deg, rgba(10,61,46,0.35) 0%, rgba(6,12,8,0.7) 100%)' }}
             >
               {/* Top accent line */}
