@@ -61,6 +61,16 @@ async function buildQR(upiLink) {
 ══════════════════════════════════════════════════════════ */
 async function createOrder(req, res, next) {
   try {
+    // Fail fast with helpful message if DB is not connected
+    const mongoose = require('mongoose');
+    if (mongoose.connection.readyState !== 1) {
+      return res.status(503).json({
+        success: false,
+        message: 'Database is currently unavailable. Please try again in a moment.',
+        db_offline: true,
+      });
+    }
+
     const { planId, name, phone, timing } = req.body;
 
     // 1. Input validation
