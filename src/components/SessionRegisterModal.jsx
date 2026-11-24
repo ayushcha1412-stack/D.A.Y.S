@@ -22,15 +22,15 @@ import { useApp } from '../context/AppContext';
 const ANNUAL_FEE = 567;
 
 const TIMINGS = [
-  '5:15 AM – Morning Sadhana',
-  '6:00 AM – Sunrise Yoga',
-  '7:00 AM – Power Yogasana',
-  "8:00 AM – Children's Yoga",
-  '9:00 AM – Wellness Yoga',
-  '5:00 PM – Evening Yoga',
-  '6:00 PM – Sunset Sadhana',
-  '7:00 PM – Night Yoga',
-  '10:00 PM – Yoga Nidra (Online)',
+  '05:15 AM / 05:30 AM',
+  '06:00 AM / 06:15 AM / 06:30 AM',
+  '07:00 AM / 07:15 AM',
+  '08:00 AM / 08:15 AM',
+  '09:00 AM / 09:15 AM',
+  '03:30 PM – Only for Yogasana Players (केवल योगासन खिलाड़ियों हेतु)',
+  '05:00 PM',
+  '06:00 PM',
+  '07:00 PM – Summer Season Only (केवल ग्रीष्मकाल हेतु)',
 ];
 
 function Field({ label, error, children }) {
