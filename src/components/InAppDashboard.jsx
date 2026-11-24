@@ -1,71 +1,78 @@
 /**
- * InAppDashboard — complete owner control centre
- * Opens as an overlay on the website (gold + button x5 taps)
- * Uses real MongoDB APIs via src/utils/api.js
- * Falls back to localStorage when backend is offline
+ * InAppDashboard — Complete Admin Control Centre
+ * Opens when Plus button is tapped 2× on the floating action button.
+ * Covers every section of the website.
  */
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useApp } from '../context/AppContext';
 import * as API from '../utils/api';
 
-/* ── Fallback offline PIN ──────────────────────────── */
-const OFFLINE_PIN = '2024';
-
-/* ── Theme ────────────────────────────────────────── */
+/* ─── Theme ─────────────────────────────────────────── */
 const T = {
   bg: '#060e09', surf: '#0d1f12', surf2: '#142a18',
-  bdr: '#1e3a22', gold: '#d4a843', cream: '#f0e8d0',
-  muted: '#6a8870',
+  bdr: '#1e3a22', gold: '#d4a843', goldL: '#f5d98b',
+  cream: '#f0e8d0', muted: '#6a8870', red: '#c0392b',
+  green: '#115c45', greenT: '#6ee7b7',
 };
 
-/* ════════════════════════════════════════════════════
-   ATOMS
-════════════════════════════════════════════════════ */
-function Btn({ children, onClick, v = 'primary', sm, disabled, full }) {
-  const bg = { primary: T.gold, ghost: 'transparent', danger: 'rgba(192,57,43,.75)', success: 'rgba(17,92,69,.75)' }[v] ?? T.gold;
-  const col = { primary: '#000', ghost: T.cream, danger: '#fff', success: '#fff' }[v] ?? '#000';
-  const brd = v === 'ghost' ? `1px solid ${T.bdr}` : 'none';
+/* ─── NAV SECTIONS ───────────────────────────────────── */
+const SECTIONS = [
+  { id: 'overview',      icon: '📊', label: 'Overview' },
+  { id: 'enquiries',     icon: '✉️',  label: 'Enquiries' },
+  { id: 'memberships',   icon: '🎫',  label: 'Memberships' },
+  { id: 'payments',      icon: '💳',  label: 'Payments' },
+  { id: 'reviews',       icon: '⭐',  label: 'Reviews' },
+  { id: 'facilitators',  icon: '🧘',  label: 'Facilitators' },
+  { id: 'gallery',       icon: '🖼️',  label: 'Gallery' },
+  { id: 'classes',       icon: '📚',  label: 'Classes' },
+  { id: 'plans',         icon: '💎',  label: 'Plans' },
+  { id: 'achievements',  icon: '🏆',  label: 'Achievements' },
+  { id: 'schedule',      icon: '🕐',  label: 'Schedule' },
+  { id: 'config',        icon: '⚙️',  label: 'Site Config' },
+];
+
+/* ─── ATOMS ──────────────────────────────────────────── */
+function Btn({ children, onClick, v = 'primary', sm, disabled, full, style: sx }) {
+  const bg  = { primary: T.gold, ghost: 'transparent', danger: T.red + 'cc', success: T.green + 'cc' }[v] ?? T.gold;
+  const col = { primary: '#000', ghost: T.cream, danger: '#fff', success: T.greenT }[v] ?? '#000';
   return (
     <button onClick={onClick} disabled={disabled} style={{
-      background: bg, color: col, border: brd,
-      padding: sm ? '3px 10px' : '6px 14px', borderRadius: 8,
-      fontSize: sm ? 11 : 12, fontWeight: 600,
+      background: bg, color: col,
+      border: v === 'ghost' ? `1px solid ${T.bdr}` : 'none',
+      padding: sm ? '3px 10px' : '7px 15px',
+      borderRadius: 8, fontSize: sm ? 11 : 12, fontWeight: 600,
       cursor: disabled ? 'not-allowed' : 'pointer',
-      opacity: disabled ? .5 : 1, transition: 'opacity .15s',
-      width: full ? '100%' : undefined, fontFamily: 'inherit',
+      opacity: disabled ? .4 : 1, width: full ? '100%' : 'auto',
+      fontFamily: 'inherit', transition: 'opacity .15s', ...sx,
     }}>{children}</button>
   );
 }
 
-function Fld({ label, value, onChange, type = 'text', rows, ph, style: sx }) {
-  const base = {
-    width: '100%', background: T.bg, border: `1px solid ${T.bdr}`,
-    borderRadius: 8, padding: '6px 10px', color: T.cream, fontSize: 12,
-    outline: 'none', boxSizing: 'border-box', marginTop: 3, fontFamily: 'inherit',
-  };
+function Fld({ label, value, onChange, type = 'text', rows, ph }) {
+  const base = { width: '100%', background: T.bg, border: `1px solid ${T.bdr}`, borderRadius: 8, padding: '6px 10px', color: T.cream, fontSize: 12, outline: 'none', boxSizing: 'border-box', marginTop: 3, fontFamily: 'inherit', resize: 'vertical' };
   return (
     <div style={{ marginBottom: 10 }}>
       {label && <div style={{ fontSize: 10, color: T.muted, textTransform: 'uppercase', letterSpacing: '.06em' }}>{label}</div>}
-      {rows
-        ? <textarea value={value ?? ''} onChange={e => onChange(e.target.value)} rows={rows} placeholder={ph} style={{ ...base, resize: 'vertical', ...sx }} />
-        : <input type={type} value={value ?? ''} onChange={e => onChange(e.target.value)} placeholder={ph} style={{ ...base, ...sx }} />}
+      {rows ? <textarea value={value ?? ''} onChange={e => onChange(e.target.value)} rows={rows} placeholder={ph} style={base} />
+             : <input type={type} value={value ?? ''} onChange={e => onChange(e.target.value)} placeholder={ph} style={base} />}
     </div>
   );
 }
 
-function Slct({ label, value, onChange, opts }) {
+function Sel({ label, value, onChange, opts }) {
   return (
     <div style={{ marginBottom: 10 }}>
       {label && <div style={{ fontSize: 10, color: T.muted, textTransform: 'uppercase', letterSpacing: '.06em' }}>{label}</div>}
-      <select value={value ?? ''} onChange={e => onChange(e.target.value)} style={{
-        width: '100%', background: T.bg, border: `1px solid ${T.bdr}`, borderRadius: 8,
-        padding: '6px 10px', color: T.cream, fontSize: 12, outline: 'none', marginTop: 3,
-      }}>
+      <select value={value ?? ''} onChange={e => onChange(e.target.value)} style={{ width: '100%', background: T.bg, border: `1px solid ${T.bdr}`, borderRadius: 8, padding: '6px 10px', color: T.cream, fontSize: 12, outline: 'none', marginTop: 3, fontFamily: 'inherit' }}>
         {opts.map(o => <option key={o.v ?? o} value={o.v ?? o}>{o.l ?? o}</option>)}
       </select>
     </div>
   );
+}
+
+function Tag({ label, color = T.gold }) {
+  return <span style={{ display: 'inline-block', fontSize: 10, padding: '1px 7px', borderRadius: 999, background: `${color}22`, color, border: `1px solid ${color}44`, whiteSpace: 'nowrap' }}>{label}</span>;
 }
 
 function Card({ title, badge, children, action }) {
@@ -74,17 +81,13 @@ function Card({ title, badge, children, action }) {
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', borderBottom: `1px solid ${T.bdr}` }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <span style={{ color: T.cream, fontWeight: 600, fontSize: 13 }}>{title}</span>
-          {badge > 0 && <span style={{ background: 'rgba(192,57,43,.75)', color: '#fff', borderRadius: 999, fontSize: 10, padding: '1px 7px', fontWeight: 700 }}>{badge}</span>}
+          {badge > 0 && <span style={{ background: T.red + 'aa', color: '#fff', borderRadius: 999, fontSize: 10, padding: '1px 7px', fontWeight: 700 }}>{badge}</span>}
         </div>
         {action}
       </div>
       <div style={{ padding: '12px 14px' }}>{children}</div>
     </div>
   );
-}
-
-function Tag({ label, color = T.gold }) {
-  return <span style={{ display: 'inline-block', fontSize: 10, padding: '1px 7px', borderRadius: 999, background: `${color}22`, color, border: `1px solid ${color}44` }}>{label}</span>;
 }
 
 function Tbl({ cols, rows, empty = 'Nothing yet.' }) {
@@ -94,62 +97,54 @@ function Tbl({ cols, rows, empty = 'Nothing yet.' }) {
         <thead><tr>{cols.map(h => <th key={h} style={{ textAlign: 'left', padding: '5px 8px', color: T.muted, fontSize: 10, textTransform: 'uppercase', borderBottom: `1px solid ${T.bdr}`, whiteSpace: 'nowrap' }}>{h}</th>)}</tr></thead>
         <tbody>
           {rows.length === 0
-            ? <tr><td colSpan={cols.length} style={{ padding: '20px 8px', textAlign: 'center', color: T.muted }}>{empty}</td></tr>
-            : rows.map((r, i) => (
-              <tr key={i} style={{ borderBottom: `1px solid ${T.bdr}44` }}>
-                {r.map((cell, j) => <td key={j} style={{ padding: '6px 8px', color: T.cream, maxWidth: 180, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', verticalAlign: 'middle' }}>{cell}</td>)}
-              </tr>
-            ))}
+            ? <tr><td colSpan={cols.length} style={{ padding: '24px 8px', textAlign: 'center', color: T.muted }}>{empty}</td></tr>
+            : rows.map((r, i) => <tr key={i} style={{ borderBottom: `1px solid ${T.bdr}44` }}>{r.map((c, j) => <td key={j} style={{ padding: '6px 8px', color: T.cream, maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', verticalAlign: 'middle' }}>{c}</td>)}</tr>)}
         </tbody>
       </table>
     </div>
   );
 }
 
+function Spinner() { return <div style={{ color: T.muted, fontSize: 12, padding: '20px 0', textAlign: 'center' }}>Loading…</div>; }
+
+const fmt  = d => d ? new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: '2-digit' }) : '—';
+const eid  = x => x?._id || x?.id || '';
+const API_ORIGIN = import.meta.env.VITE_API_URL || '';
+function rImg(img) {
+  if (!img) return null;
+  if (typeof img !== 'string') return null;
+  if (img.startsWith('http')) return img;
+  if (img.startsWith('/uploads')) return `${API_ORIGIN}${img}`;
+  return img;
+}
+
+/* ─── Toast ──────────────────────────────────────────── */
 function Toast({ msg, ok, onDone }) {
-  useEffect(() => { const t = setTimeout(onDone, 2800); return () => clearTimeout(t); }, [onDone]);
+  useEffect(() => { const t = setTimeout(onDone, 3000); return () => clearTimeout(t); }, [onDone]);
   return (
     <motion.div initial={{ x: 80, opacity: 0 }} animate={{ x: 0, opacity: 1 }} exit={{ x: 80, opacity: 0 }}
-      style={{
-        position: 'fixed', bottom: 80, right: 16, zIndex: 99999,
-        background: ok ? 'rgba(17,92,69,.95)' : 'rgba(120,20,20,.95)',
-        color: ok ? '#6ee7b7' : '#fca5a5',
-        border: `1px solid ${ok ? 'rgba(52,211,153,.3)' : 'rgba(248,113,113,.3)'}`,
-        borderRadius: 10, padding: '8px 16px', fontSize: 12, fontWeight: 600,
-        boxShadow: '0 4px 20px rgba(0,0,0,.5)',
-      }}>
+      style={{ position: 'fixed', bottom: 90, right: 16, zIndex: 99999, background: ok ? '#0d3d28' : '#3d0d0d', color: ok ? T.greenT : '#fca5a5', border: `1px solid ${ok ? '#2ecc7144' : '#e74c3c44'}`, borderRadius: 10, padding: '8px 16px', fontSize: 12, fontWeight: 600, boxShadow: '0 4px 20px rgba(0,0,0,.5)' }}>
       {msg}
     </motion.div>
   );
 }
 
-function Loading() {
-  return <div style={{ color: T.muted, fontSize: 12, padding: '16px 0', textAlign: 'center' }}>Loading…</div>;
-}
-
-const fmt = d => d ? new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: '2-digit' }) : '—';
-const id  = x => x?._id || x?.id;
-
-/* ════════════════════════════════════════════════════
-   AUTH GATE  — Admin login OR offline PIN
-════════════════════════════════════════════════════ */
+/* ─── AuthGate ───────────────────────────────────────── */
+const OFFLINE_PIN = '2024';
 function AuthGate({ onUnlock, onClose }) {
-  const [tab, setTab]   = useState('login');
+  const [tab, setTab]     = useState('login');
   const [email, setEmail] = useState('admin@anyogainstitute.org');
-  const [pwd, setPwd]   = useState('');
-  const [pin, setPin]   = useState('');
-  const [err, setErr]   = useState('');
-  const [busy, setBusy] = useState(false);
+  const [pwd, setPwd]     = useState('');
+  const [pin, setPin]     = useState('');
+  const [err, setErr]     = useState('');
+  const [busy, setBusy]   = useState(false);
   const [tries, setTries] = useState(0);
   const [locked, setLocked] = useState(false);
 
   const doLogin = async () => {
     setErr(''); setBusy(true);
-    try {
-      const res = await API.adminLogin(email, pwd);
-      API.setToken(res.token);
-      onUnlock(true);
-    } catch (e) { setErr(e.message || 'Login failed'); }
+    try { const r = await API.adminLogin(email, pwd); API.setToken(r.token); onUnlock(true); }
+    catch (e) { setErr(e.message || 'Login failed'); }
     finally { setBusy(false); }
   };
 
@@ -160,28 +155,23 @@ function AuthGate({ onUnlock, onClose }) {
     setPin(next);
     if (next.length === 4) {
       setTimeout(() => {
-        if (next === OFFLINE_PIN) { onUnlock(false); }
-        else {
-          const t = tries + 1; setTries(t); setPin('');
-          if (t >= 5) {
-            setLocked(true); setErr('Too many attempts. Wait 1 min.');
-            setTimeout(() => { setLocked(false); setTries(0); setErr(''); }, 60000);
-          } else setErr(`Wrong PIN — ${5 - t} left`);
-        }
+        if (next === OFFLINE_PIN) { onUnlock(false); return; }
+        const t = tries + 1; setTries(t); setPin('');
+        if (t >= 5) { setLocked(true); setErr('Too many attempts. Wait 1 min.'); setTimeout(() => { setLocked(false); setTries(0); setErr(''); }, 60000); }
+        else setErr(`Wrong PIN — ${5 - t} left`);
       }, 120);
     }
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '32px 24px', textAlign: 'center', minHeight: 420, justifyContent: 'center' }}>
-      <img src="/images/logo.png" alt="Logo" style={{ width: 48, height: 48, borderRadius: '50%', objectFit: 'cover', border: `1px solid ${T.gold}44`, marginBottom: 12 }} />
-      <div style={{ color: T.cream, fontWeight: 700, fontSize: 16, marginBottom: 4 }}>Owner Dashboard</div>
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '32px 24px', textAlign: 'center', minHeight: 460, justifyContent: 'center' }}>
+      <img src="/images/logo.png" alt="" style={{ width: 52, height: 52, borderRadius: '50%', objectFit: 'cover', border: `2px solid ${T.gold}55`, marginBottom: 14 }} />
+      <div style={{ color: T.goldL, fontWeight: 700, fontSize: 17, marginBottom: 2 }}>DAYS Admin Dashboard</div>
+      <div style={{ color: T.muted, fontSize: 11, marginBottom: 20 }}>DIVY ASHISH YOGA SANSTHAN</div>
 
-      {/* Tab toggle */}
       <div style={{ display: 'flex', gap: 4, marginBottom: 20, background: T.surf2, borderRadius: 8, padding: 3 }}>
         {[['login', '📧 Admin Login'], ['pin', '🔢 Offline PIN']].map(([m, l]) => (
-          <button key={m} onClick={() => { setTab(m); setErr(''); }}
-            style={{ padding: '4px 14px', borderRadius: 6, border: 'none', fontSize: 11, fontWeight: 600, cursor: 'pointer', background: tab === m ? T.gold : 'transparent', color: tab === m ? '#000' : T.muted }}>
+          <button key={m} onClick={() => { setTab(m); setErr(''); }} style={{ padding: '4px 14px', borderRadius: 6, border: 'none', fontSize: 11, fontWeight: 600, cursor: 'pointer', background: tab === m ? T.gold : 'transparent', color: tab === m ? '#000' : T.muted }}>
             {l}
           </button>
         ))}
@@ -193,18 +183,16 @@ function AuthGate({ onUnlock, onClose }) {
           <Fld label="Password" value={pwd} onChange={setPwd} type="password" ph="••••••••" />
           {err && <div style={{ color: '#fca5a5', fontSize: 11, marginBottom: 8 }}>{err}</div>}
           <Btn onClick={doLogin} disabled={busy} full>{busy ? 'Signing in…' : 'Sign In'}</Btn>
-          <p style={{ color: T.muted, fontSize: 10, marginTop: 8 }}>admin@anyogainstitute.org / Admin@DAYS2024!</p>
+          <div style={{ color: T.muted, fontSize: 10, marginTop: 10 }}>admin@anyogainstitute.org</div>
         </div>
       ) : (
         <div>
-          <p style={{ color: T.muted, fontSize: 11, marginBottom: 16 }}>4-digit PIN (offline mode only)</p>
-          <div style={{ display: 'flex', gap: 10, justifyContent: 'center', marginBottom: 20 }}>
-            {[0, 1, 2, 3].map(i => (
-              <div key={i} style={{ width: 11, height: 11, borderRadius: '50%', border: `2px solid ${pin.length > i ? T.gold : T.bdr}`, background: pin.length > i ? T.gold : 'transparent', transition: 'all .15s' }} />
-            ))}
+          <div style={{ color: T.muted, fontSize: 11, marginBottom: 14 }}>4-digit PIN (offline mode)</div>
+          <div style={{ display: 'flex', gap: 10, justifyContent: 'center', marginBottom: 18 }}>
+            {[0,1,2,3].map(i => <div key={i} style={{ width: 11, height: 11, borderRadius: '50%', border: `2px solid ${pin.length > i ? T.gold : T.bdr}`, background: pin.length > i ? T.gold : 'transparent', transition: 'all .15s' }} />)}
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 8, width: 200 }}>
-            {[1, 2, 3, 4, 5, 6, 7, 8, 9, '', 0, '⌫'].map((k, i) => (
+            {[1,2,3,4,5,6,7,8,9,'',0,'⌫'].map((k, i) => (
               <button key={i} disabled={locked || k === ''} onClick={() => k !== '' && pressPin(String(k))}
                 style={{ height: 44, borderRadius: 10, background: k === '' ? 'transparent' : T.surf, border: `1px solid ${k === '' ? 'transparent' : T.bdr}`, color: k === '⌫' ? T.gold : T.cream, fontSize: 14, fontWeight: 600, cursor: k === '' ? 'default' : 'pointer', opacity: locked ? .4 : 1, visibility: k === '' ? 'hidden' : 'visible' }}>
                 {k}
@@ -214,54 +202,14 @@ function AuthGate({ onUnlock, onClose }) {
           {err && <div style={{ color: '#fca5a5', fontSize: 11, marginTop: 10 }}>{err}</div>}
         </div>
       )}
-      <button onClick={onClose} style={{ marginTop: 16, background: 'none', border: 'none', color: T.muted, fontSize: 11, cursor: 'pointer' }}>Cancel</button>
+      <button onClick={onClose} style={{ marginTop: 18, background: 'none', border: 'none', color: T.muted, fontSize: 11, cursor: 'pointer' }}>Cancel</button>
     </div>
   );
 }
 
-/* ── Helper: uploads URL fix for production ───────────── */
-const API_BASE = import.meta.env.VITE_API_URL || '';
-function resolveImg(img) {
-  if (!img) return null;
-  if (img.startsWith('http://') || img.startsWith('https://')) return img;
-  if (img.startsWith('/uploads')) return `${API_BASE}${img}`;
-  return img;
-}
-
-/* ════════════════════════════════════════════════════
-   HOOK: useApiList — loads from API, falls back to ctx
-   FIX: some endpoints return {data, stats} (achievements)
-        so we always pick .data first, then fallback to
-        the raw response if it's already an array.
-════════════════════════════════════════════════════ */
-function useApiList(apiFn, ctxData, ctxSetter) {
-  const [items, setItems] = useState(ctxData || []);
-  const [loading, setLoading] = useState(true);
-  const setterRef = useRef(ctxSetter);
-  setterRef.current = ctxSetter;
-
-  const refresh = useCallback(async () => {
-    setLoading(true);
-    try {
-      const res = await apiFn();
-      // Handle both {data:[]} and {data:[], stats:[]} shapes
-      const data = res?.data ?? res;
-      const arr = Array.isArray(data) ? data : [];
-      setItems(arr);
-      setterRef.current?.(arr);
-    } catch { setItems(ctxData || []); }
-    finally { setLoading(false); }
-  }, [apiFn]); // eslint-disable-line
-
-  useEffect(() => { refresh(); }, [refresh]);
-  return { items, loading, refresh, setItems };
-}
-
-/* ════════════════════════════════════════════════════
-   OVERVIEW
-════════════════════════════════════════════════════ */
-function OverviewPanel({ goTo, isAdmin }) {
-  const { pendingEnquiries, pendingMemberships, pendingReviews, siteReviews, siteFacilitators, sitePlans } = useApp();
+/* ─── OVERVIEW ───────────────────────────────────────── */
+function Overview({ goTo, isAdmin }) {
+  const { pendingEnquiries, pendingMemberships, pendingReviews, siteReviews, siteFacilitators, sitePlans, siteGallery, siteClasses, siteAchievements, siteSchedule } = useApp();
   const [stats, setStats] = useState(null);
 
   useEffect(() => {
@@ -269,54 +217,59 @@ function OverviewPanel({ goTo, isAdmin }) {
   }, [isAdmin]);
 
   const cards = [
-    { icon: '✉️', label: 'Enquiries',      value: stats?.enquiries      ?? pendingEnquiries.length,   badge: stats?.newEnquiries         ?? pendingEnquiries.filter(e => e.status === 'new').length,      tab: 'enquiries' },
-    { icon: '🎫', label: 'Memberships',    value: stats?.memberships    ?? pendingMemberships.length, badge: stats?.pendingMemberships   ?? pendingMemberships.filter(m => m.status === 'pending').length, tab: 'memberships' },
-    { icon: '⏳', label: 'Pending Reviews',value: stats?.pendingReviews ?? pendingReviews.length,     badge: stats?.pendingReviews       ?? pendingReviews.length,                                          tab: 'reviews' },
-    { icon: '🧘', label: 'Facilitators',   value: stats?.facilitators   ?? siteFacilitators.length,  badge: 0, tab: 'facilitators' },
-    { icon: '💎', label: 'Plans',          value: sitePlans.length,                                   badge: 0, tab: 'plans' },
-    { icon: '⭐', label: 'Reviews Live',   value: stats?.reviews        ?? siteReviews.length,        badge: 0, tab: 'published' },
+    { icon: '✉️', label: 'Enquiries',    val: stats?.enquiries    ?? pendingEnquiries.length,   badge: stats?.newEnquiries       ?? pendingEnquiries.filter(e=>!e.status||e.status==='new').length,       tab: 'enquiries' },
+    { icon: '🎫', label: 'Memberships',  val: stats?.memberships  ?? pendingMemberships.length, badge: stats?.pendingMemberships ?? pendingMemberships.filter(m=>m.status==='pending'||!m.status).length, tab: 'memberships' },
+    { icon: '💳', label: 'Payments',     val: '—',                                              badge: 0,                                                                                                   tab: 'payments' },
+    { icon: '⭐', label: 'Reviews',      val: stats?.reviews      ?? siteReviews.length,        badge: stats?.pendingReviews     ?? pendingReviews.length,                                                  tab: 'reviews' },
+    { icon: '🧘', label: 'Facilitators', val: stats?.facilitators ?? siteFacilitators.length,   badge: 0,                                                                                                   tab: 'facilitators' },
+    { icon: '🖼️', label: 'Gallery',      val: siteGallery.length,                               badge: 0,                                                                                                   tab: 'gallery' },
+    { icon: '📚', label: 'Classes',      val: siteClasses.length,                               badge: 0,                                                                                                   tab: 'classes' },
+    { icon: '💎', label: 'Plans',        val: sitePlans.length,                                 badge: 0,                                                                                                   tab: 'plans' },
+    { icon: '🏆', label: 'Achievements', val: siteAchievements.length,                          badge: 0,                                                                                                   tab: 'achievements' },
+    { icon: '🕐', label: 'Schedule',     val: siteSchedule.length,                              badge: 0,                                                                                                   tab: 'schedule' },
+    { icon: '⚙️', label: 'Config',       val: '—',                                              badge: 0,                                                                                                   tab: 'config' },
   ];
 
   return (
     <div>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 8, marginBottom: 14 }}>
+      {/* Grid stats */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 7, marginBottom: 14 }}>
         {cards.map(c => (
-          <div key={c.label} onClick={() => goTo(c.tab)} style={{ background: T.surf, border: `1px solid ${c.badge > 0 ? `${T.gold}66` : T.bdr}`, borderRadius: 10, padding: '10px 8px', textAlign: 'center', cursor: 'pointer', transition: 'border .15s' }}>
-            <div style={{ fontSize: 20 }}>{c.icon}</div>
-            <div style={{ color: T.gold, fontSize: 18, fontWeight: 700, lineHeight: 1.1 }}>{c.value}</div>
-            <div style={{ color: T.muted, fontSize: 9, textTransform: 'uppercase', marginTop: 2 }}>{c.label}</div>
-            {c.badge > 0 && <div style={{ marginTop: 4, background: 'rgba(192,57,43,.65)', color: '#fff', borderRadius: 999, fontSize: 9, padding: '1px 6px', display: 'inline-block' }}>{c.badge} new</div>}
+          <div key={c.label} onClick={() => goTo(c.tab)} style={{ background: T.surf, border: `1px solid ${c.badge>0 ? T.gold+'66' : T.bdr}`, borderRadius: 10, padding: '10px 6px', textAlign: 'center', cursor: 'pointer' }}>
+            <div style={{ fontSize: 18 }}>{c.icon}</div>
+            <div style={{ color: T.gold, fontSize: 17, fontWeight: 700, lineHeight: 1.1, marginTop: 2 }}>{c.val}</div>
+            <div style={{ color: T.muted, fontSize: 9, textTransform: 'uppercase', marginTop: 1 }}>{c.label}</div>
+            {c.badge>0 && <div style={{ marginTop: 3, background: T.red+'aa', color:'#fff', borderRadius: 999, fontSize: 9, padding: '1px 6px', display: 'inline-block' }}>{c.badge} new</div>}
           </div>
         ))}
       </div>
 
+      {/* Quick links */}
+      <Card title="🚀 Quick Actions">
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+          {SECTIONS.filter(s => s.id !== 'overview').map(s => (
+            <button key={s.id} onClick={() => goTo(s.id)} style={{ background: T.surf2, border: `1px solid ${T.bdr}`, borderRadius: 8, padding: '5px 12px', fontSize: 11, color: T.cream, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5 }}>
+              <span>{s.icon}</span> {s.label}
+            </button>
+          ))}
+        </div>
+      </Card>
+
       {isAdmin && (
-        <Card title="🖥️ Full Admin Panel (MongoDB)">
-          <p style={{ fontSize: 11, color: T.muted, marginBottom: 8 }}>Full-featured panel with search, pagination, image uploads, and all settings.</p>
-          <a href={`${import.meta.env.VITE_API_URL || ''}/admin`} target="_blank" rel="noopener noreferrer"
+        <Card title="🖥️ Full Admin Panel">
+          <p style={{ fontSize: 11, color: T.muted, marginBottom: 8 }}>Full-featured server panel with pagination, image uploads and all settings.</p>
+          <a href={`${API_ORIGIN}/admin`} target="_blank" rel="noopener noreferrer"
             style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: T.gold, color: '#000', padding: '7px 18px', borderRadius: 8, fontSize: 12, fontWeight: 700, textDecoration: 'none' }}>
-            Open Admin Panel ↗
+            Open Full Admin Panel ↗
           </a>
         </Card>
       )}
-
-      <Card title="ℹ️ How it works">
-        <ul style={{ color: T.muted, fontSize: 11, lineHeight: 2, paddingLeft: 14 }}>
-          <li>Contact form → <b style={{ color: T.cream }}>Enquiries</b> tab</li>
-          <li>Membership registration → <b style={{ color: T.cream }}>Memberships</b> tab</li>
-          <li>Review submission → <b style={{ color: T.cream }}>Pending Reviews</b> → approve to publish</li>
-          <li>All edits save to <b style={{ color: T.gold }}>MongoDB</b> and reflect on site immediately</li>
-          {!isAdmin && <li style={{ color: '#fca5a5' }}>⚠️ Offline mode — changes save locally only. Log in as admin for MongoDB sync.</li>}
-        </ul>
-      </Card>
     </div>
   );
 }
 
-/* ════════════════════════════════════════════════════
-   ENQUIRIES
-════════════════════════════════════════════════════ */
-function EnquiriesPanel({ toast, isAdmin }) {
+/* ─── ENQUIRIES ──────────────────────────────────────── */
+function Enquiries({ toast, isAdmin }) {
   const { pendingEnquiries, updateEnquiries } = useApp();
   const [items, setItems] = useState([]);
   const [busy, setBusy]   = useState(true);
@@ -325,81 +278,61 @@ function EnquiriesPanel({ toast, isAdmin }) {
 
   const load = useCallback(async () => {
     setBusy(true);
-    if (isAdmin) {
-      try { const r = await API.getEnquiries(); const d = r.data || []; setItems(d); updateEnquiries(d); }
-      catch { setItems(pendingEnquiries); }
-    } else { setItems(pendingEnquiries); }
+    try {
+      if (isAdmin) { const r = await API.getEnquiries(); const d = r.data||[]; setItems(d); updateEnquiries(d); }
+      else setItems(pendingEnquiries);
+    } catch { setItems(pendingEnquiries); }
     setBusy(false);
   }, [isAdmin]); // eslint-disable-line
-
   useEffect(() => { load(); }, [load]);
 
-  const shown = items.filter(e => !search || [e.name, e.phone, e.service, e.email].some(f => f?.toLowerCase().includes(search.toLowerCase())));
+  const shown = items.filter(e => !search || [e.name,e.phone,e.service,e.email].some(f=>f?.toLowerCase().includes(search.toLowerCase())));
 
-  const mark = async (itemId, status) => {
+  const mark = async (eid2, status) => {
     try {
-      if (isAdmin) await API.updateEnquiry(itemId, { status });
-      const u = items.map(e => id(e) === itemId ? { ...e, status } : e);
-      setItems(u); updateEnquiries(u); toast('Updated ✓');
+      if (isAdmin) await API.updateEnquiry(eid2, { status });
+      const u = items.map(e => eid(e)===eid2 ? {...e,status} : e); setItems(u); updateEnquiries(u); toast('Updated ✓');
     } catch (e) { toast(e.message, false); }
   };
 
-  const del = async (itemId) => {
-    if (!confirm('Delete this enquiry?')) return;
+  const del = async (eid2) => {
+    if (!confirm('Delete?')) return;
     try {
-      if (isAdmin) await API.deleteEnquiry(itemId);
-      const u = items.filter(e => id(e) !== itemId);
-      setItems(u); updateEnquiries(u); toast('Deleted');
+      if (isAdmin) await API.deleteEnquiry(eid2);
+      const u = items.filter(e=>eid(e)!==eid2); setItems(u); updateEnquiries(u); toast('Deleted');
     } catch (e) { toast(e.message, false); }
   };
 
   if (view) {
-    const e = items.find(x => id(x) === view);
-    if (!e) { setView(null); return null; }
+    const e = items.find(x=>eid(x)===view); if (!e) { setView(null); return null; }
     return (
-      <Card title={`✉️ Enquiry — ${e.name}`} action={<Btn v="ghost" sm onClick={() => setView(null)}>← Back</Btn>}>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, fontSize: 12, marginBottom: 10 }}>
-          {[['Name', e.name], ['Phone', e.phone], ['Email', e.email || '—'], ['Service', e.service], ['Date', fmt(e.date || e.createdAt)], ['Status', e.status || 'new']].map(([l, v]) => (
-            <div key={l}><span style={{ color: T.muted }}>{l}: </span>{l === 'Phone' ? <a href={`tel:+91${v}`} style={{ color: T.gold }}>{v}</a> : <span style={{ color: T.cream }}>{v}</span>}</div>
+      <Card title={`✉️ ${e.name}`} action={<Btn v="ghost" sm onClick={()=>setView(null)}>← Back</Btn>}>
+        <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8, fontSize:12, marginBottom:10 }}>
+          {[['Name',e.name],['Phone',e.phone],['Email',e.email||'—'],['Service',e.service],['Date',fmt(e.date||e.createdAt)],['Status',e.status||'new']].map(([l,v])=>(
+            <div key={l}><span style={{color:T.muted}}>{l}: </span>{l==='Phone'?<a href={`tel:+91${v}`} style={{color:T.gold}}>{v}</a>:<span style={{color:T.cream}}>{v}</span>}</div>
           ))}
         </div>
-        <div style={{ background: T.bg, border: `1px solid ${T.bdr}`, borderRadius: 8, padding: '8px 10px', fontSize: 12, marginBottom: 12, whiteSpace: 'pre-wrap', color: T.cream }}>{e.message}</div>
-        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-          <Btn v="success" sm onClick={() => { mark(id(e), 'replied'); setView(null); }}>✓ Mark Replied</Btn>
-          <Btn v="ghost" sm onClick={() => mark(id(e), 'read')}>Mark Read</Btn>
-          <a href={`https://wa.me/91${e.phone}?text=Namaste ${e.name}! Regarding your enquiry about ${e.service}.`} target="_blank" rel="noopener noreferrer">
-            <Btn v="success" sm>WhatsApp ↗</Btn>
-          </a>
-          <Btn v="danger" sm onClick={() => { del(id(e)); setView(null); }}>Delete</Btn>
+        <div style={{ background:T.bg, border:`1px solid ${T.bdr}`, borderRadius:8, padding:'8px 10px', fontSize:12, marginBottom:10, whiteSpace:'pre-wrap', color:T.cream }}>{e.message}</div>
+        <div style={{ display:'flex', gap:6, flexWrap:'wrap' }}>
+          <Btn v="success" sm onClick={()=>{mark(eid(e),'replied');setView(null);}}>✓ Replied</Btn>
+          <Btn v="ghost" sm onClick={()=>mark(eid(e),'read')}>Mark Read</Btn>
+          <a href={`https://wa.me/91${e.phone}?text=Namaste ${e.name}! Regarding your enquiry about ${e.service}.`} target="_blank" rel="noopener noreferrer"><Btn v="success" sm>WhatsApp ↗</Btn></a>
+          <Btn v="danger" sm onClick={()=>{del(eid(e));setView(null);}}>Delete</Btn>
         </div>
       </Card>
     );
   }
 
   return (
-    <Card title={`✉️ Enquiries`} badge={shown.filter(e => e.status === 'new' || !e.status).length}>
-      <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search name / phone / service…"
-        style={{ width: '100%', background: T.bg, border: `1px solid ${T.bdr}`, borderRadius: 8, padding: '6px 10px', color: T.cream, fontSize: 11, outline: 'none', marginBottom: 10, boxSizing: 'border-box' }} />
-      {busy ? <Loading /> : (
-        <Tbl cols={['Date', 'Name', 'Phone', 'Service', 'Status', 'Actions']}
-          rows={shown.map(e => [
-            fmt(e.date || e.createdAt), e.name, e.phone, e.service,
-            <Tag key="s" label={e.status || 'new'} color={e.status === 'replied' ? '#6ee7b7' : e.status === 'read' ? T.muted : T.gold} />,
-            <div key="a" style={{ display: 'flex', gap: 4 }}>
-              <Btn v="ghost" sm onClick={() => setView(id(e))}>View</Btn>
-              <Btn v="danger" sm onClick={() => del(id(e))}>Del</Btn>
-            </div>
-          ])}
-          empty="No enquiries yet — they appear when visitors submit the contact form." />
-      )}
+    <Card title="✉️ Enquiries" badge={shown.filter(e=>!e.status||e.status==='new').length}>
+      <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search…" style={{ width:'100%', background:T.bg, border:`1px solid ${T.bdr}`, borderRadius:8, padding:'6px 10px', color:T.cream, fontSize:11, outline:'none', marginBottom:10, boxSizing:'border-box' }} />
+      {busy ? <Spinner/> : <Tbl cols={['Date','Name','Phone','Service','Status','Act']} rows={shown.map(e=>[fmt(e.date||e.createdAt),e.name,e.phone,e.service,<Tag key="s" label={e.status||'new'} color={e.status==='replied'?T.greenT:e.status==='read'?T.muted:T.gold}/>,<div key="a" style={{display:'flex',gap:3}}><Btn v="ghost" sm onClick={()=>setView(eid(e))}>View</Btn><Btn v="danger" sm onClick={()=>del(eid(e))}>Del</Btn></div>])} empty="No enquiries yet." />}
     </Card>
   );
 }
 
-/* ════════════════════════════════════════════════════
-   MEMBERSHIPS
-════════════════════════════════════════════════════ */
-function MembershipsPanel({ toast, isAdmin }) {
+/* ─── MEMBERSHIPS ────────────────────────────────────── */
+function Memberships({ toast, isAdmin }) {
   const { pendingMemberships, updateMemberships } = useApp();
   const [items, setItems] = useState([]);
   const [busy, setBusy]   = useState(true);
@@ -408,918 +341,756 @@ function MembershipsPanel({ toast, isAdmin }) {
 
   const load = useCallback(async () => {
     setBusy(true);
-    if (isAdmin) {
-      try { const r = await API.getMemberships(); const d = r.data || []; setItems(d); updateMemberships(d); }
-      catch { setItems(pendingMemberships); }
-    } else { setItems(pendingMemberships); }
+    try {
+      if (isAdmin) { const r = await API.getMemberships(); const d=r.data||[]; setItems(d); updateMemberships(d); }
+      else setItems(pendingMemberships);
+    } catch { setItems(pendingMemberships); }
     setBusy(false);
   }, [isAdmin]); // eslint-disable-line
-
   useEffect(() => { load(); }, [load]);
 
-  const shown = items.filter(m => !search || [m.name, m.phone, m.email].some(f => f?.toLowerCase().includes(search.toLowerCase())));
+  const shown = items.filter(m=>!search||[m.name,m.phone,m.email].some(f=>f?.toLowerCase().includes(search.toLowerCase())));
 
-  const setStatus = async (itemId, status) => {
+  const setStatus = async (eid2, status) => {
     try {
-      if (isAdmin) await API.updateMembership(itemId, { status });
-      const u = items.map(m => id(m) === itemId ? { ...m, status } : m);
-      setItems(u); updateMemberships(u); toast('Updated ✓');
+      if (isAdmin) await API.updateMembership(eid2, { status });
+      const u=items.map(m=>eid(m)===eid2?{...m,status}:m); setItems(u); updateMemberships(u); toast('Updated ✓');
     } catch (e) { toast(e.message, false); }
   };
 
-  const del = async (itemId) => {
+  const del = async (eid2) => {
     if (!confirm('Delete?')) return;
     try {
-      if (isAdmin) await API.deleteMembership(itemId);
-      const u = items.filter(m => id(m) !== itemId);
-      setItems(u); updateMemberships(u); toast('Deleted');
+      if (isAdmin) await API.deleteMembership(eid2);
+      const u=items.filter(m=>eid(m)!==eid2); setItems(u); updateMemberships(u); toast('Deleted');
     } catch (e) { toast(e.message, false); }
   };
 
   if (view) {
-    const m = items.find(x => id(x) === view);
-    if (!m) { setView(null); return null; }
+    const m=items.find(x=>eid(x)===view); if (!m) { setView(null); return null; }
     return (
-      <Card title={`🎫 ${m.name}`} action={<Btn v="ghost" sm onClick={() => setView(null)}>← Back</Btn>}>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, fontSize: 12, marginBottom: 10 }}>
-          {[['Name', m.name], ['Phone', m.phone], ['Age/Gender', `${m.age} · ${m.gender || '—'}`], ['Email', m.email || '—'], ['Level', m.level], ['Mode', m.mode], ['Type', m.membershipType], ['Date', fmt(m.date || m.createdAt)]].map(([l, val]) => (
-            <div key={l} style={l === 'Type' ? { gridColumn: '1/-1' } : {}}>
-              <span style={{ color: T.muted }}>{l}: </span>
-              {l === 'Phone' ? <a href={`tel:+91${val}`} style={{ color: T.gold }}>{val}</a>
-                : l === 'Type' ? <Tag label={val} color={T.gold} />
-                : <span style={{ color: T.cream }}>{val}</span>}
-            </div>
+      <Card title={`🎫 ${m.name}`} action={<Btn v="ghost" sm onClick={()=>setView(null)}>← Back</Btn>}>
+        <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8, fontSize:12, marginBottom:10 }}>
+          {[['Name',m.name],['Phone',m.phone],['Age',m.age],['Gender',m.gender||'—'],['Email',m.email||'—'],['Level',m.level],['Mode',m.mode],['Type',m.membershipType],['Date',fmt(m.date||m.createdAt)]].map(([l,v])=>(
+            <div key={l}><span style={{color:T.muted}}>{l}: </span>{l==='Phone'?<a href={`tel:+91${v}`} style={{color:T.gold}}>{v}</a>:<span style={{color:T.cream}}>{v}</span>}</div>
           ))}
-          {m.goals?.length > 0 && <div style={{ gridColumn: '1/-1' }}><span style={{ color: T.muted }}>Goals: </span><span style={{ color: T.cream }}>{m.goals.join(', ')}</span></div>}
+          {m.goals?.length>0&&<div style={{gridColumn:'1/-1'}}><span style={{color:T.muted}}>Goals: </span><span style={{color:T.cream}}>{m.goals.join(', ')}</span></div>}
         </div>
-        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-          <Btn v="success" sm onClick={() => { setStatus(id(m), 'active'); setView(null); }}>✓ Activate</Btn>
-          <Btn v="ghost" sm onClick={() => { setStatus(id(m), 'cancelled'); setView(null); }}>Cancel</Btn>
-          <a href={`https://wa.me/91${m.phone}?text=Namaste ${m.name}! Your yoga membership has been confirmed. Welcome to DIVY ASHISH YOGA SANSTHAN!`} target="_blank" rel="noopener noreferrer">
-            <Btn v="success" sm>WhatsApp ↗</Btn>
-          </a>
-          <Btn v="danger" sm onClick={() => { del(id(m)); setView(null); }}>Delete</Btn>
+        <div style={{ display:'flex', gap:6, flexWrap:'wrap' }}>
+          <Btn v="success" sm onClick={()=>{setStatus(eid(m),'active');setView(null);}}>✓ Activate</Btn>
+          <Btn v="ghost" sm onClick={()=>{setStatus(eid(m),'cancelled');setView(null);}}>Cancel</Btn>
+          <a href={`https://wa.me/91${m.phone}?text=Namaste ${m.name}! Your membership is confirmed. Welcome to DIVY ASHISH YOGA SANSTHAN!`} target="_blank" rel="noopener noreferrer"><Btn v="success" sm>WhatsApp ↗</Btn></a>
+          <Btn v="danger" sm onClick={()=>{del(eid(m));setView(null);}}>Delete</Btn>
         </div>
       </Card>
     );
   }
 
   return (
-    <Card title="🎫 Memberships" badge={shown.filter(m => !m.status || m.status === 'pending').length}>
-      <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search name / phone…"
-        style={{ width: '100%', background: T.bg, border: `1px solid ${T.bdr}`, borderRadius: 8, padding: '6px 10px', color: T.cream, fontSize: 11, outline: 'none', marginBottom: 10, boxSizing: 'border-box' }} />
-      {busy ? <Loading /> : (
-        <Tbl cols={['Date', 'Name', 'Phone', 'Type', 'Level', 'Status', 'Actions']}
-          rows={shown.map(m => [
-            fmt(m.date || m.createdAt), m.name, m.phone,
-            <Tag key="t" label={m.membershipType} color={T.gold} />,
-            m.level,
-            <Tag key="s" label={m.status || 'pending'} color={m.status === 'active' ? '#6ee7b7' : m.status === 'pending' || !m.status ? T.gold : T.muted} />,
-            <div key="a" style={{ display: 'flex', gap: 4 }}>
-              <Btn v="ghost" sm onClick={() => setView(id(m))}>View</Btn>
-              <Btn v="danger" sm onClick={() => del(id(m))}>Del</Btn>
-            </div>
-          ])}
-          empty="No registrations yet — they appear when visitors complete the membership form." />
-      )}
+    <Card title="🎫 Memberships" badge={shown.filter(m=>!m.status||m.status==='pending').length}>
+      <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search…" style={{ width:'100%', background:T.bg, border:`1px solid ${T.bdr}`, borderRadius:8, padding:'6px 10px', color:T.cream, fontSize:11, outline:'none', marginBottom:10, boxSizing:'border-box' }} />
+      {busy?<Spinner/>:<Tbl cols={['Date','Name','Phone','Type','Level','Status','Act']} rows={shown.map(m=>[fmt(m.date||m.createdAt),m.name,m.phone,<Tag key="t" label={m.membershipType} color={T.gold}/>,m.level,<Tag key="s" label={m.status||'pending'} color={m.status==='active'?T.greenT:T.gold}/>,<div key="a" style={{display:'flex',gap:3}}><Btn v="ghost" sm onClick={()=>setView(eid(m))}>View</Btn><Btn v="danger" sm onClick={()=>del(eid(m))}>Del</Btn></div>])} empty="No memberships yet." />}
     </Card>
   );
 }
 
-/* ════════════════════════════════════════════════════
-   REVIEWS
-════════════════════════════════════════════════════ */
-function ReviewsPanel({ toast, isAdmin }) {
-  const { pendingReviews, updatePendingReviews, siteReviews, updateReviews } = useApp();
-  const [all, setAll]     = useState([]);
+/* ─── PAYMENTS ───────────────────────────────────────── */
+function Payments({ toast, isAdmin }) {
+  const [items, setItems] = useState([]);
   const [busy, setBusy]   = useState(true);
-  const [editing, setEdit] = useState(null);
+  const [view, setView]   = useState(null);
+  const [utr, setUtr]     = useState('');
+
+  const load = useCallback(async () => {
+    setBusy(true);
+    try {
+      const r = await fetch(`${API_ORIGIN}/api/payment/list`, { headers: { Authorization: `Bearer ${API.getToken()}` } });
+      const d = await r.json(); setItems(d.data || []);
+    } catch { setItems([]); }
+    setBusy(false);
+  }, []);
+  useEffect(() => { load(); }, [load]);
+
+  const confirm = async (orderId) => {
+    if (!utr.trim()) { toast('Enter UTR number', false); return; }
+    try {
+      const r = await fetch(`${API_ORIGIN}/api/payment/confirm`, { method:'POST', headers:{'Content-Type':'application/json',Authorization:`Bearer ${API.getToken()}`}, body: JSON.stringify({orderId, utrNumber:utr.trim()}) });
+      const d = await r.json(); if (d.success) { toast('Payment confirmed ✓'); setView(null); setUtr(''); load(); } else toast(d.message, false);
+    } catch (e) { toast(e.message, false); }
+  };
+
+  const statusColor = s => ({ created:T.gold, paid:T.greenT, failed:'#fca5a5', expired:T.muted })[s] || T.muted;
+
+  if (view) {
+    const p = items.find(x=>x.orderId===view); if (!p) { setView(null); return null; }
+    return (
+      <Card title={`💳 ${p.name}`} action={<Btn v="ghost" sm onClick={()=>setView(null)}>← Back</Btn>}>
+        <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8, fontSize:12, marginBottom:10 }}>
+          {[['Name',p.name],['Phone',p.phone],['Plan',p.planLabel],['Amount',`₹${p.amountRupees}`],['Status',p.status],['Date',fmt(p.createdAt)],['Timing',p.timing||'—'],['UTR',p.utrNumber||'—']].map(([l,v])=>(
+            <div key={l}><span style={{color:T.muted}}>{l}: </span><span style={{color:l==='Amount'?T.gold:l==='Status'?statusColor(p.status):T.cream}}>{v}</span></div>
+          ))}
+          <div style={{gridColumn:'1/-1',wordBreak:'break-all'}}><span style={{color:T.muted}}>Order ID: </span><span style={{color:T.cream,fontFamily:'monospace',fontSize:10}}>{p.orderId}</span></div>
+        </div>
+        {p.status==='created'&&(
+          <div style={{ background:T.bg, border:`1px solid ${T.gold}44`, borderRadius:10, padding:12, marginTop:8 }}>
+            <div style={{ color:T.gold, fontSize:11, fontWeight:600, marginBottom:8 }}>✓ Confirm Payment Received</div>
+            <Fld label="UTR / Transaction Reference *" value={utr} onChange={setUtr} ph="12-digit UTR number" />
+            <Btn v="success" onClick={()=>confirm(p.orderId)}>Confirm & Activate</Btn>
+          </div>
+        )}
+      </Card>
+    );
+  }
+
+  return (
+    <Card title="💳 Payments" badge={items.filter(p=>p.status==='created').length}>
+      <div style={{ color:T.muted, fontSize:11, marginBottom:8 }}>UPI: ashishku325@okhdfcbank · Confirm after receiving payment in your UPI app</div>
+      {busy?<Spinner/>:<Tbl cols={['Date','Name','Plan','Amount','Status','Act']} rows={items.map(p=>[fmt(p.createdAt),p.name,p.planLabel?.slice(0,20),`₹${p.amountRupees}`,<Tag key="s" label={p.status} color={statusColor(p.status)}/>,<Btn key="a" v={p.status==='created'?'primary':'ghost'} sm onClick={()=>{setView(p.orderId);setUtr('');}}>{p.status==='created'?'Confirm':'View'}</Btn>])} empty="No payments yet." />}
+    </Card>
+  );
+}
+
+/* ─── REVIEWS ────────────────────────────────────────── */
+function Reviews({ toast, isAdmin }) {
+  const { pendingReviews, updatePendingReviews, siteReviews, updateReviews } = useApp();
+  const [all, setAll]   = useState([]);
+  const [busy, setBusy] = useState(true);
+  const [editing, setEd] = useState(null);
+  const [form, setForm] = useState({});
+
+  const load = useCallback(async () => {
+    setBusy(true);
+    try {
+      if (isAdmin) { const r=await API.getReviews(); setAll(r.data||[]); }
+      else setAll([...pendingReviews,...siteReviews]);
+    } catch { setAll([...pendingReviews,...siteReviews]); }
+    setBusy(false);
+  }, [isAdmin]); // eslint-disable-line
+  useEffect(()=>{load();},[load]);
+
+  const pending   = isAdmin ? all.filter(r=>!r.approved) : pendingReviews;
+  const published = isAdmin ? all.filter(r=>r.approved)  : siteReviews;
+
+  const approve = async (r) => {
+    try {
+      if (isAdmin) await API.approveReview(eid(r));
+      else { updatePendingReviews(pendingReviews.filter(p=>p.id!==r.id)); updateReviews([{...r,verified:true},...siteReviews]); }
+      await load(); toast('Published ✓');
+    } catch (e) { toast(e.message,false); }
+  };
+
+  const del = async (eid2, isPending) => {
+    if (!confirm('Delete?')) return;
+    try {
+      if (isAdmin) await API.deleteReview(eid2);
+      else if (isPending) updatePendingReviews(pendingReviews.filter(p=>p.id!==eid2));
+      else updateReviews(siteReviews.filter(r=>r.id!==eid2));
+      await load(); toast('Deleted');
+    } catch (e) { toast(e.message,false); }
+  };
+
+  const save = async () => {
+    if (!form.name?.trim()||!form.review?.trim()) return;
+    try {
+      if (editing==='new') { const r=await API.submitReview({...form,approved:false}); if (isAdmin) await API.approveReview(r.data?._id||eid(r.data)); }
+      else await API.updateReview(editing, form);
+      await load(); setEd(null); setForm({}); toast('Saved ✓');
+    } catch { updateReviews([{...form,id:Date.now(),verified:true},...siteReviews]); setEd(null); setForm({}); toast('Saved ✓'); }
+  };
+
+  const cats = ['Group Yoga','Online Yoga','Personal Yoga','Yogasana Sports',"Children's Yoga",'General','Other'];
+
+  return (
+    <div>
+      {pending.length>0 && (
+        <Card title="⏳ Pending Approval" badge={pending.length}>
+          {pending.map(r=>(
+            <div key={eid(r)} style={{ background:T.bg, border:`1px solid ${T.gold}33`, borderRadius:8, padding:'10px 12px', marginBottom:8 }}>
+              <div style={{ display:'flex', justifyContent:'space-between', marginBottom:4 }}>
+                <span style={{color:T.cream,fontWeight:600,fontSize:12}}>{r.name}</span>
+                <span style={{color:T.muted,fontSize:10}}>{'★'.repeat(r.rating||5)} · {fmt(r.date||r.createdAt)}</span>
+              </div>
+              <p style={{color:'#c8d8c0',fontSize:11,margin:'0 0 8px',lineHeight:1.5}}>{r.review}</p>
+              <div style={{display:'flex',gap:6}}>
+                <Btn v="success" sm onClick={()=>approve(r)}>✓ Approve</Btn>
+                <Btn v="danger" sm onClick={()=>del(eid(r),true)}>Delete</Btn>
+              </div>
+            </div>
+          ))}
+        </Card>
+      )}
+
+      <Card title={`⭐ Published (${published.length})`}
+        action={<Btn sm onClick={()=>{setForm({name:'',category:'Group Yoga',rating:5,review:''});setEd('new');}}>+ Add</Btn>}>
+        {editing!==null&&(
+          <div style={{ background:T.bg, border:`1px solid ${T.bdr}`, borderRadius:10, padding:12, marginBottom:10 }}>
+            <Fld label="Name *" value={form.name||''} onChange={v=>setForm(p=>({...p,name:v}))} />
+            <Sel label="Category" value={form.category||'Group Yoga'} onChange={v=>setForm(p=>({...p,category:v}))} opts={cats} />
+            <div style={{marginBottom:10}}>
+              <div style={{fontSize:10,color:T.muted,textTransform:'uppercase',letterSpacing:'.06em'}}>Rating</div>
+              <div style={{display:'flex',gap:4,marginTop:3}}>{[1,2,3,4,5].map(n=><button key={n} onClick={()=>setForm(p=>({...p,rating:n}))} style={{fontSize:20,background:'none',border:'none',cursor:'pointer',color:(form.rating||5)>=n?T.gold:T.bdr}}>★</button>)}</div>
+            </div>
+            <Fld label="Review *" value={form.review||''} onChange={v=>setForm(p=>({...p,review:v}))} rows={3} />
+            <div style={{display:'flex',gap:6}}><Btn onClick={save}>Save</Btn><Btn v="ghost" onClick={()=>{setEd(null);setForm({});}}>Cancel</Btn></div>
+          </div>
+        )}
+        {busy?<Spinner/>:<Tbl cols={['Name','Category','Rating','Preview','Act']} rows={published.map(r=>[r.name,r.category||'—','★'.repeat(r.rating||5),(r.review||'').slice(0,40)+'…',<div key="a" style={{display:'flex',gap:3}}><Btn v="ghost" sm onClick={()=>{setForm({...r});setEd(eid(r));}}>Edit</Btn><Btn v="danger" sm onClick={()=>del(eid(r),false)}>Del</Btn></div>])} empty="No published reviews." />}
+      </Card>
+    </div>
+  );
+}
+
+/* ─── FACILITATORS ───────────────────────────────────── */
+function Facilitators({ toast, isAdmin }) {
+  const { siteFacilitators, updateFacilitators } = useApp();
+  const [items, setItems] = useState(siteFacilitators||[]);
+  const [busy, setBusy]   = useState(false);
+  const [editing, setEd]  = useState(null);
   const [form, setForm]   = useState({});
 
   const load = useCallback(async () => {
     setBusy(true);
-    if (isAdmin) {
-      try { const r = await API.getReviews(); setAll(r.data || []); }
-      catch { setAll([...pendingReviews, ...siteReviews]); }
-    } else { setAll([...pendingReviews, ...siteReviews]); }
+    try { const r=await API.getFacilitators(); const d=r.data||[]; setItems(d); updateFacilitators(d); }
+    catch { setItems(siteFacilitators); }
     setBusy(false);
-  }, [isAdmin]); // eslint-disable-line
-
-  useEffect(() => { load(); }, [load]);
-
-  const pending   = isAdmin ? all.filter(r => !r.approved) : pendingReviews;
-  const published = isAdmin ? all.filter(r => r.approved)  : siteReviews;
-
-  const approve = async (r) => {
-    try {
-      if (isAdmin) await API.approveReview(id(r));
-      else { updatePendingReviews(pendingReviews.filter(p => p.id !== r.id)); updateReviews([{ ...r, verified: true }, ...siteReviews]); }
-      await load(); toast('Published ✓');
-    } catch (e) { toast(e.message, false); }
-  };
-
-  const del = async (itemId, isPending) => {
-    if (!confirm('Delete?')) return;
-    try {
-      if (isAdmin) await API.deleteReview(itemId);
-      else if (isPending) updatePendingReviews(pendingReviews.filter(p => p.id !== itemId));
-      else updateReviews(siteReviews.filter(r => r.id !== itemId));
-      await load(); toast('Deleted');
-    } catch (e) { toast(e.message, false); }
-  };
-
-  const save = async () => {
-    if (!form.name?.trim() || !form.review?.trim()) return;
-    try {
-      if (editing === 'new') {
-        const res = await API.submitReview({ ...form, approved: false });
-        if (isAdmin) await API.approveReview(res.data?._id || id(res.data));
-      } else {
-        await API.updateReview(editing, form);
-      }
-      await load(); setEdit(null); setForm({}); toast('Saved ✓');
-    } catch (e) {
-      // offline fallback
-      if (editing === 'new') updateReviews([{ ...form, id: Date.now(), verified: true }, ...siteReviews]);
-      else updateReviews(siteReviews.map(r => (r._id || r.id) === editing ? { ...r, ...form } : r));
-      setEdit(null); setForm({}); toast('Saved ✓');
-    }
-  };
-
-  const cats = ['Group Yoga', 'Online Yoga', 'Personal Yoga', 'Yogasana Sports', "Children's Yoga", 'Other'];
-
-  return (
-    <div>
-      {/* Pending */}
-      {pending.length > 0 && (
-        <Card title="⏳ Pending Approval" badge={pending.length}>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            {pending.map(r => (
-              <div key={id(r)} style={{ background: T.bg, border: `1px solid ${T.gold}33`, borderRadius: 8, padding: '10px 12px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-                  <span style={{ color: T.cream, fontWeight: 600, fontSize: 12 }}>{r.name}</span>
-                  <span style={{ color: T.muted, fontSize: 10 }}>{fmt(r.date || r.createdAt)} · {'★'.repeat(r.rating || 5)}</span>
-                </div>
-                <p style={{ color: '#c8d8c0', fontSize: 11, margin: '0 0 8px', lineHeight: 1.5 }}>{r.review}</p>
-                <div style={{ display: 'flex', gap: 6 }}>
-                  <Btn v="success" sm onClick={() => approve(r)}>✓ Approve & Publish</Btn>
-                  <Btn v="danger" sm onClick={() => del(id(r), true)}>✕ Delete</Btn>
-                </div>
-              </div>
-            ))}
-          </div>
-        </Card>
-      )}
-
-      {/* Published */}
-      <Card title={`⭐ Published Reviews (${published.length})`}
-        action={<Btn sm onClick={() => { setForm({ name: '', category: 'Group Yoga', rating: 5, review: '', date: new Date().toISOString().split('T')[0] }); setEdit('new'); }}>+ Add</Btn>}>
-        <AnimatePresence>
-          {editing !== null && (
-            <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} style={{ overflow: 'hidden', marginBottom: 10 }}>
-              <div style={{ background: T.bg, border: `1px solid ${T.bdr}`, borderRadius: 10, padding: 12 }}>
-                <Fld label="Name *" value={form.name || ''} onChange={v => setForm(p => ({ ...p, name: v }))} />
-                <Slct label="Category" value={form.category || 'Group Yoga'} onChange={v => setForm(p => ({ ...p, category: v }))} opts={cats} />
-                <div style={{ marginBottom: 10 }}>
-                  <div style={{ fontSize: 10, color: T.muted, textTransform: 'uppercase', letterSpacing: '.06em' }}>Rating</div>
-                  <div style={{ display: 'flex', gap: 4, marginTop: 3 }}>
-                    {[1, 2, 3, 4, 5].map(n => <button key={n} onClick={() => setForm(p => ({ ...p, rating: n }))} style={{ fontSize: 20, background: 'none', border: 'none', cursor: 'pointer', color: (form.rating || 5) >= n ? T.gold : T.bdr }}>★</button>)}
-                  </div>
-                </div>
-                <Fld label="Review *" value={form.review || ''} onChange={v => setForm(p => ({ ...p, review: v }))} rows={3} />
-                <div style={{ display: 'flex', gap: 8 }}><Btn onClick={save}>Save</Btn><Btn v="ghost" onClick={() => { setEdit(null); setForm({}); }}>Cancel</Btn></div>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-        {busy ? <Loading /> : (
-          <Tbl cols={['Name', 'Category', 'Rating', 'Date', 'Actions']}
-            rows={published.map(r => [
-              r.name, <Tag key="c" label={r.category || '—'} />,
-              <span key="r" style={{ color: T.gold }}>{'★'.repeat(r.rating || 5)}</span>,
-              fmt(r.date || r.createdAt),
-              <div key="a" style={{ display: 'flex', gap: 4 }}>
-                <Btn v="ghost" sm onClick={() => { setForm({ ...r }); setEdit(id(r)); }}>Edit</Btn>
-                <Btn v="danger" sm onClick={() => del(id(r), false)}>Del</Btn>
-              </div>
-            ])}
-            empty="No published reviews." />
-        )}
-      </Card>
-    </div>
-  );
-}
-
-/* ════════════════════════════════════════════════════
-   FACILITATORS
-════════════════════════════════════════════════════ */
-function FacilitatorsPanel({ toast, isAdmin }) {
-  const { updateFacilitators } = useApp();
-  const { items, loading, refresh } = useApiList(API.getFacilitators, [], updateFacilitators);
-  const [editing, setEdit] = useState(null);
-  const [form, setForm]    = useState({});
-  const [imgFile, setImgFile] = useState(null);
-
-  const save = async () => {
-    if (!form.name?.trim()) return;
-    const spec = typeof form.specialization === 'string' ? form.specialization.split(',').map(s => s.trim()).filter(Boolean) : (form.specialization || []);
-    const cert = typeof form.certifications === 'string' ? form.certifications.split(',').map(s => s.trim()).filter(Boolean) : (form.certifications || []);
-    const data = { ...form, specialization: spec, certifications: cert };
-    try {
-      let savedId;
-      if (editing === 'new') { const r = await API.createFacilitator(data); savedId = r.data?._id; }
-      else { await API.updateFacilitator(editing, data); savedId = editing; }
-      if (imgFile && savedId) await API.uploadFacilitatorImage(savedId, imgFile);
-      await refresh(); setEdit(null); setForm({}); setImgFile(null); toast('Saved ✓');
-    } catch (e) { toast(e.message || 'Save failed — admin login required', false); }
-  };
-
-  const del = async (itemId) => {
-    if (!confirm('Delete facilitator?')) return;
-    try { await API.deleteFacilitator(itemId); await refresh(); toast('Deleted'); }
-    catch (e) { toast(e.message, false); }
-  };
-
-  const imgSrc = img => resolveImg(img);
-
-  return (
-    <Card title="🧘 Facilitators" action={<Btn sm onClick={() => { setForm({ name: '', title: '', qualification: '', experience: '', specialization: [], certifications: [], biography: '', social: { whatsapp: '' }, featured: false }); setEdit('new'); }}>+ Add</Btn>}>
-      <AnimatePresence>
-        {editing !== null && (
-          <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} style={{ overflow: 'hidden', marginBottom: 10 }}>
-            <div style={{ background: T.bg, border: `1px solid ${T.bdr}`, borderRadius: 10, padding: 12 }}>
-              <Fld label="Full Name *" value={form.name || ''} onChange={v => setForm(p => ({ ...p, name: v }))} />
-              <Fld label="Title / Role" value={form.title || ''} onChange={v => setForm(p => ({ ...p, title: v }))} />
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-                <Fld label="Qualification" value={form.qualification || ''} onChange={v => setForm(p => ({ ...p, qualification: v }))} />
-                <Fld label="Experience" value={form.experience || ''} onChange={v => setForm(p => ({ ...p, experience: v }))} />
-              </div>
-              <Fld label="Specializations (comma sep.)" value={Array.isArray(form.specialization) ? form.specialization.join(', ') : (form.specialization || '')} onChange={v => setForm(p => ({ ...p, specialization: v }))} />
-              <Fld label="Certifications (comma sep.)" value={Array.isArray(form.certifications) ? form.certifications.join(', ') : (form.certifications || '')} onChange={v => setForm(p => ({ ...p, certifications: v }))} />
-              <Fld label="WhatsApp Number" value={form.social?.whatsapp || ''} onChange={v => setForm(p => ({ ...p, social: { ...p.social, whatsapp: v } }))} />
-              <Fld label="Biography" value={form.biography || ''} onChange={v => setForm(p => ({ ...p, biography: v }))} rows={3} />
-              <div style={{ marginBottom: 10 }}>
-                <div style={{ fontSize: 10, color: T.muted, textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: 4 }}>Photo (jpg/png/webp)</div>
-                <input type="file" accept="image/*" onChange={e => setImgFile(e.target.files[0])}
-                  style={{ width: '100%', background: T.bg, border: `1px solid ${T.bdr}`, borderRadius: 8, padding: '4px 8px', color: T.cream, fontSize: 11 }} />
-              </div>
-              <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, color: T.cream, cursor: 'pointer', marginBottom: 10 }}>
-                <input type="checkbox" checked={!!form.featured} onChange={e => setForm(p => ({ ...p, featured: e.target.checked }))} /> Featured
-              </label>
-              {!isAdmin && <p style={{ color: '#fca5a5', fontSize: 10, marginBottom: 8 }}>⚠️ Admin login required to save to database</p>}
-              <div style={{ display: 'flex', gap: 8 }}><Btn onClick={save} disabled={!isAdmin}>Save to MongoDB</Btn><Btn v="ghost" onClick={() => { setEdit(null); setForm({}); setImgFile(null); }}>Cancel</Btn></div>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-      {loading ? <Loading /> : (
-        <Tbl cols={['Photo', 'Name', 'Title', 'Featured', 'Actions']}
-          rows={items.map(f => [
-            imgSrc(f.image) ? <img key="i" src={imgSrc(f.image)} alt="" style={{ width: 32, height: 32, borderRadius: '50%', objectFit: 'cover', border: `1px solid ${T.bdr}` }} /> : '🧘',
-            f.name?.replace(/\[|\]/g, ''), f.title,
-            f.featured ? <span key="fe" style={{ color: T.gold }}>⭐ Yes</span> : <span key="fe" style={{ color: T.muted }}>No</span>,
-            <div key="a" style={{ display: 'flex', gap: 4 }}>
-              <Btn v="ghost" sm onClick={() => { setForm({ ...f, specialization: (f.specialization || []).join(', '), certifications: (f.certifications || []).join(', ') }); setEdit(id(f)); }}>Edit</Btn>
-              {isAdmin && <Btn v="danger" sm onClick={() => del(id(f))}>Del</Btn>}
-            </div>
-          ])}
-          empty="No facilitators." />
-      )}
-    </Card>
-  );
-}
-
-/* ════════════════════════════════════════════════════
-   GALLERY
-════════════════════════════════════════════════════ */
-function GalleryPanel({ toast, isAdmin }) {
-  const { updateGallery } = useApp();
-  const { items, loading, refresh } = useApiList(API.getGallery, [], updateGallery);
-  const [editing, setEdit] = useState(null);
-  const [form, setForm]    = useState({});
-  const [imgFile, setImgFile] = useState(null);
-
-  const save = async () => {
-    if (!isAdmin) { toast('Admin login required', false); return; }
-    if (editing === 'new' && !imgFile) { toast('Select an image', false); return; }
-    try {
-      if (editing === 'new') {
-        const fd = new FormData();
-        ['title', 'alt', 'category'].forEach(k => fd.append(k, form[k] || ''));
-        fd.append('image', imgFile);
-        await API.createGalleryItem(fd);
-      } else {
-        await API.updateGalleryItem(editing, { title: form.title, alt: form.alt, category: form.category });
-      }
-      await refresh(); setEdit(null); setForm({}); setImgFile(null); toast('Saved ✓');
-    } catch (e) { toast(e.message, false); }
-  };
-
-  const del = async (itemId) => {
-    if (!confirm('Delete?')) return;
-    try { await API.deleteGalleryItem(itemId); await refresh(); toast('Deleted'); }
-    catch (e) { toast(e.message, false); }
-  };
-
-  const src = img => resolveImg(img);
-  const cats = ['Facilitators', 'Yoga Classes', 'Events', 'Competitions', 'Students', 'Certificates', 'General'];
-
-  return (
-    <Card title={`🖼️ Gallery (${items.length})`}
-      action={<Btn sm onClick={() => { setForm({ title: '', alt: '', category: 'Facilitators' }); setEdit('new'); }}>+ Upload</Btn>}>
-      <AnimatePresence>
-        {editing !== null && (
-          <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} style={{ overflow: 'hidden', marginBottom: 10 }}>
-            <div style={{ background: T.bg, border: `1px solid ${T.bdr}`, borderRadius: 10, padding: 12 }}>
-              <Fld label="Title *" value={form.title || ''} onChange={v => setForm(p => ({ ...p, title: v }))} />
-              <Fld label="Alt Text" value={form.alt || ''} onChange={v => setForm(p => ({ ...p, alt: v }))} />
-              <Slct label="Category" value={form.category || 'Facilitators'} onChange={v => setForm(p => ({ ...p, category: v }))} opts={cats} />
-              {editing === 'new' && (
-                <div style={{ marginBottom: 10 }}>
-                  <div style={{ fontSize: 10, color: T.muted, textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: 4 }}>Image *</div>
-                  <input type="file" accept="image/*" onChange={e => setImgFile(e.target.files[0])}
-                    style={{ width: '100%', background: T.bg, border: `1px solid ${T.bdr}`, borderRadius: 8, padding: '4px 8px', color: T.cream, fontSize: 11 }} />
-                </div>
-              )}
-              <div style={{ display: 'flex', gap: 8 }}>
-                <Btn onClick={save} disabled={!isAdmin}>Save</Btn>
-                <Btn v="ghost" onClick={() => { setEdit(null); setForm({}); setImgFile(null); }}>Cancel</Btn>
-              </div>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-      {loading ? <Loading /> : (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(90px,1fr))', gap: 8 }}>
-          {items.length === 0 && <div style={{ gridColumn: '1/-1', color: T.muted, fontSize: 12, textAlign: 'center', padding: '20px 0' }}>No gallery items yet.</div>}
-          {items.map(g => (
-            <div key={id(g)} style={{ position: 'relative', aspectRatio: '1', borderRadius: 8, overflow: 'hidden', border: `1px solid ${T.bdr}`, cursor: 'pointer' }}
-              onMouseEnter={e => e.currentTarget.querySelector('.overlay').style.opacity = '1'}
-              onMouseLeave={e => e.currentTarget.querySelector('.overlay').style.opacity = '0'}>
-              <img src={resolveImg(typeof g.image === 'string' ? g.image : '') || ''} alt={g.alt || g.title} style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'top' }} onError={e => { e.target.style.display = 'none'; }} />
-              <div className="overlay" style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,.7)', opacity: 0, transition: 'opacity .2s', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}>
-                <Btn v="ghost" sm onClick={() => { setForm({ title: g.title, alt: g.alt, category: g.category }); setEdit(id(g)); }}>✏️</Btn>
-                {isAdmin && <Btn v="danger" sm onClick={() => del(id(g))}>🗑️</Btn>}
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-    </Card>
-  );
-}
-
-/* ════════════════════════════════════════════════════
-   PLANS
-════════════════════════════════════════════════════ */
-function PlansPanel({ toast, isAdmin }) {
-  const { updatePlans } = useApp();
-  const { items, loading, refresh } = useApiList(API.getPlans, [], updatePlans);
-  const [editing, setEdit] = useState(null);
-  const [form, setForm]    = useState({});
-
-  const save = async () => {
-    if (!isAdmin) { toast('Admin login required', false); return; }
-    const benefits = typeof form.benefits === 'string' ? form.benefits.split('\n').map(b => b.trim()).filter(Boolean) : (form.benefits || []);
-    try {
-      if (editing === 'new') await API.createPlan({ ...form, benefits });
-      else await API.updatePlan(editing, { ...form, benefits });
-      await refresh(); setEdit(null); setForm({}); toast('Saved ✓');
-    } catch (e) { toast(e.message, false); }
-  };
-
-  const del = async (itemId) => {
-    if (!confirm('Delete?')) return;
-    try { await API.deletePlan(itemId); await refresh(); toast('Deleted'); }
-    catch (e) { toast(e.message, false); }
-  };
-
-  return (
-    <Card title="💎 Plans" action={<Btn sm onClick={() => setEdit('new') || setForm({ name: '', subtitle: '', price: '', priceDetails: '', mode: '', duration: 'Monthly', benefits: [], cta: 'Get Started', badge: '', popular: false, color: 'forest' })}>+ Add</Btn>}>
-      <AnimatePresence>
-        {editing !== null && (
-          <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} style={{ overflow: 'hidden', marginBottom: 10 }}>
-            <div style={{ background: T.bg, border: `1px solid ${T.bdr}`, borderRadius: 10, padding: 12 }}>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-                <Fld label="Plan Name *" value={form.name || ''} onChange={v => setForm(p => ({ ...p, name: v }))} />
-                <Fld label="Price *" value={form.price || ''} onChange={v => setForm(p => ({ ...p, price: v }))} ph="₹2,222" />
-              </div>
-              <Fld label="Price Details" value={form.priceDetails || ''} onChange={v => setForm(p => ({ ...p, priceDetails: v }))} />
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-                <Fld label="Mode" value={form.mode || ''} onChange={v => setForm(p => ({ ...p, mode: v }))} />
-                <Fld label="CTA Button" value={form.cta || ''} onChange={v => setForm(p => ({ ...p, cta: v }))} />
-              </div>
-              <Fld label="Badge (optional)" value={form.badge || ''} onChange={v => setForm(p => ({ ...p, badge: v }))} />
-              <Fld label="Benefits (one per line)" value={Array.isArray(form.benefits) ? form.benefits.join('\n') : (form.benefits || '')} onChange={v => setForm(p => ({ ...p, benefits: v }))} rows={5} />
-              <Slct label="Color Theme" value={form.color || 'forest'} onChange={v => setForm(p => ({ ...p, color: v }))} opts={['forest', 'gold', 'emerald', 'bronze']} />
-              <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, color: T.cream, cursor: 'pointer', marginBottom: 10 }}>
-                <input type="checkbox" checked={!!form.popular} onChange={e => setForm(p => ({ ...p, popular: e.target.checked }))} /> Popular
-              </label>
-              <div style={{ display: 'flex', gap: 8 }}><Btn onClick={save} disabled={!isAdmin}>Save</Btn><Btn v="ghost" onClick={() => { setEdit(null); setForm({}); }}>Cancel</Btn></div>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-      {loading ? <Loading /> : (
-        <Tbl cols={['Name', 'Price', 'Mode', 'Popular', 'Actions']}
-          rows={items.map(p => [
-            p.name, <span key="pr" style={{ color: T.gold }}>{p.price}</span>, p.mode || '—',
-            p.popular ? '⭐' : '—',
-            <div key="a" style={{ display: 'flex', gap: 4 }}>
-              <Btn v="ghost" sm onClick={() => { setForm({ ...p, benefits: (p.benefits || []).join('\n') }); setEdit(id(p)); }}>Edit</Btn>
-              {isAdmin && <Btn v="danger" sm onClick={() => del(id(p))}>Del</Btn>}
-            </div>
-          ])}
-          empty="No plans." />
-      )}
-    </Card>
-  );
-}
-
-/* ════════════════════════════════════════════════════
-   CLASSES
-════════════════════════════════════════════════════ */
-function ClassesPanel({ toast, isAdmin }) {
-  const { updateClasses } = useApp();
-  const { items, loading, refresh } = useApiList(API.getClasses, [], updateClasses);
-  const [editing, setEdit] = useState(null);
-  const [form, setForm]    = useState({});
-
-  const save = async () => {
-    if (!isAdmin) { toast('Admin login required', false); return; }
-    const suitableFor = typeof form.suitableFor === 'string' ? form.suitableFor.split(',').map(s => s.trim()).filter(Boolean) : (form.suitableFor || []);
-    try {
-      if (editing === 'new') await API.createClass({ ...form, suitableFor });
-      else await API.updateClass(editing, { ...form, suitableFor });
-      await refresh(); setEdit(null); setForm({}); toast('Saved ✓');
-    } catch (e) { toast(e.message, false); }
-  };
-
-  const del = async (itemId) => {
-    if (!confirm('Delete?')) return;
-    try { await API.deleteClass(itemId); await refresh(); toast('Deleted'); }
-    catch (e) { toast(e.message, false); }
-  };
-
-  return (
-    <Card title="📚 Classes" action={<Btn sm onClick={() => { setEdit('new'); setForm({ title: '', category: 'Offline', mode: 'Group', price: '', timing: '', icon: '🧘', description: '', suitableFor: [], featured: false }); }}>+ Add</Btn>}>
-      <AnimatePresence>
-        {editing !== null && (
-          <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} style={{ overflow: 'hidden', marginBottom: 10 }}>
-            <div style={{ background: T.bg, border: `1px solid ${T.bdr}`, borderRadius: 10, padding: 12 }}>
-              <Fld label="Title *" value={form.title || ''} onChange={v => setForm(p => ({ ...p, title: v }))} />
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-                <Slct label="Category" value={form.category || 'Offline'} onChange={v => setForm(p => ({ ...p, category: v }))} opts={['Offline', 'Online']} />
-                <Slct label="Mode" value={form.mode || 'Group'} onChange={v => setForm(p => ({ ...p, mode: v }))} opts={['Group', 'Personal', 'Sports']} />
-              </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-                <Fld label="Price" value={form.price || ''} onChange={v => setForm(p => ({ ...p, price: v }))} />
-                <Fld label="Icon" value={form.icon || '🧘'} onChange={v => setForm(p => ({ ...p, icon: v }))} />
-              </div>
-              <Fld label="Timing" value={form.timing || ''} onChange={v => setForm(p => ({ ...p, timing: v }))} />
-              <Fld label="Description" value={form.description || ''} onChange={v => setForm(p => ({ ...p, description: v }))} rows={2} />
-              <Fld label="Suitable For (comma sep.)" value={Array.isArray(form.suitableFor) ? form.suitableFor.join(', ') : (form.suitableFor || '')} onChange={v => setForm(p => ({ ...p, suitableFor: v }))} />
-              <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, color: T.cream, cursor: 'pointer', marginBottom: 10 }}>
-                <input type="checkbox" checked={!!form.featured} onChange={e => setForm(p => ({ ...p, featured: e.target.checked }))} /> Featured
-              </label>
-              <div style={{ display: 'flex', gap: 8 }}><Btn onClick={save} disabled={!isAdmin}>Save</Btn><Btn v="ghost" onClick={() => { setEdit(null); setForm({}); }}>Cancel</Btn></div>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-      {loading ? <Loading /> : (
-        <Tbl cols={['Icon', 'Title', 'Price', 'Mode', 'Featured', 'Actions']}
-          rows={items.filter(Boolean).map(cl => [
-            cl.icon || '🧘', cl.title,
-            <span key="p" style={{ color: T.gold }}>{cl.price || '—'}</span>,
-            cl.mode, cl.featured ? '⭐' : '—',
-            <div key="a" style={{ display: 'flex', gap: 4 }}>
-              <Btn v="ghost" sm onClick={() => { setForm({ ...cl, suitableFor: (cl.suitableFor || []).join(', ') }); setEdit(id(cl)); }}>Edit</Btn>
-              {isAdmin && <Btn v="danger" sm onClick={() => del(id(cl))}>Del</Btn>}
-            </div>
-          ])}
-          empty="No classes." />
-      )}
-    </Card>
-  );
-}
-
-/* ════════════════════════════════════════════════════
-   ACHIEVEMENTS
-════════════════════════════════════════════════════ */
-function AchievementsPanel({ toast, isAdmin }) {
-  const { updateAchievements, siteStats, updateStats } = useApp();
-  const { items, loading, refresh } = useApiList(API.getAchievements, [], updateAchievements);
-  const [editing, setEdit] = useState(null);
-  const [form, setForm]    = useState({});
-  const levels = ['District', 'State', 'National', 'Championship', 'Certification', 'Judge / Observer'];
-
-  const save = async () => {
-    if (!isAdmin) { toast('Admin login required', false); return; }
-    try {
-      if (editing === 'new') await API.createAchievement(form);
-      else await API.updateAchievement(editing, form);
-      await refresh(); setEdit(null); setForm({}); toast('Saved ✓');
-    } catch (e) { toast(e.message, false); }
-  };
-
-  const del = async (itemId) => {
-    if (!confirm('Delete?')) return;
-    try { await API.deleteAchievement(itemId); await refresh(); toast('Deleted'); }
-    catch (e) { toast(e.message, false); }
-  };
-
-  const saveStats = async () => {
-    try {
-      if (isAdmin) { for (const st of siteStats) { if (st._id) await API.updateAchievementStat(st._id, st).catch(() => {}); } }
-      updateStats([...siteStats]); toast('Stats saved ✓');
-    } catch (e) { toast(e.message, false); }
-  };
-
-  return (
-    <div>
-      {/* Counter Stats */}
-      <Card title="📊 Counter Stats" action={<Btn sm onClick={saveStats}>Save Stats</Btn>}>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-          {siteStats.map((st, i) => (
-            <div key={st._id || st.id || i} style={{ background: T.bg, border: `1px solid ${T.bdr}`, borderRadius: 8, padding: 10 }}>
-              <div style={{ display: 'flex', gap: 6, marginBottom: 6 }}>
-                <input value={st.icon || '📊'} onChange={e => updateStats(siteStats.map((s, j) => j === i ? { ...s, icon: e.target.value } : s))}
-                  style={{ width: 32, background: 'transparent', border: 'none', fontSize: 16, textAlign: 'center' }} />
-                <input value={st.value || ''} onChange={e => updateStats(siteStats.map((s, j) => j === i ? { ...s, value: e.target.value } : s))}
-                  placeholder="e.g. 11+" style={{ flex: 1, background: T.bg, border: `1px solid ${T.bdr}`, borderRadius: 6, padding: '3px 6px', color: T.gold, fontSize: 13, fontWeight: 700, outline: 'none' }} />
-              </div>
-              <input value={st.label || ''} onChange={e => updateStats(siteStats.map((s, j) => j === i ? { ...s, label: e.target.value } : s))}
-                style={{ width: '100%', background: T.bg, border: `1px solid ${T.bdr}`, borderRadius: 6, padding: '3px 6px', color: T.cream, fontSize: 11, outline: 'none', boxSizing: 'border-box' }} />
-            </div>
-          ))}
-        </div>
-      </Card>
-
-      {/* Achievements list */}
-      <Card title={`🏆 Achievements (${items.length})`}
-        action={<Btn sm onClick={() => { setEdit('new'); setForm({ title: '', level: 'State', year: '', location: '', position: '', description: '', icon: '🏆', type: 'Competition' }); }}>+ Add</Btn>}>
-        <AnimatePresence>
-          {editing !== null && (
-            <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} style={{ overflow: 'hidden', marginBottom: 10 }}>
-              <div style={{ background: T.bg, border: `1px solid ${T.bdr}`, borderRadius: 10, padding: 12 }}>
-                <Fld label="Title *" value={form.title || ''} onChange={v => setForm(p => ({ ...p, title: v }))} />
-                <Slct label="Level" value={form.level || 'State'} onChange={v => setForm(p => ({ ...p, level: v }))} opts={levels} />
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-                  <Fld label="Year" value={form.year || ''} onChange={v => setForm(p => ({ ...p, year: v }))} />
-                  <Fld label="Position" value={form.position || ''} onChange={v => setForm(p => ({ ...p, position: v }))} />
-                </div>
-                <Fld label="Location / Organisation" value={form.location || ''} onChange={v => setForm(p => ({ ...p, location: v }))} />
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-                  <Fld label="Icon (emoji)" value={form.icon || '🏆'} onChange={v => setForm(p => ({ ...p, icon: v }))} />
-                  <Fld label="Type" value={form.type || ''} onChange={v => setForm(p => ({ ...p, type: v }))} />
-                </div>
-                <Fld label="Description" value={form.description || ''} onChange={v => setForm(p => ({ ...p, description: v }))} rows={2} />
-                <div style={{ display: 'flex', gap: 8 }}><Btn onClick={save} disabled={!isAdmin}>Save</Btn><Btn v="ghost" onClick={() => { setEdit(null); setForm({}); }}>Cancel</Btn></div>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-        {loading ? <Loading /> : (
-          <Tbl cols={['Icon', 'Title', 'Level', 'Year', 'Actions']}
-            rows={items.map(a => [
-              a.icon || '🏆', a.title,
-              <Tag key="l" label={a.level} color={a.level === 'National' ? T.gold : a.level === 'State' ? '#60a5fa' : T.muted} />,
-              a.year,
-              <div key="a" style={{ display: 'flex', gap: 4 }}>
-                <Btn v="ghost" sm onClick={() => { setForm({ ...a }); setEdit(id(a)); }}>Edit</Btn>
-                {isAdmin && <Btn v="danger" sm onClick={() => del(id(a))}>Del</Btn>}
-              </div>
-            ])}
-            empty="No achievements." />
-        )}
-      </Card>
-    </div>
-  );
-}
-
-/* ════════════════════════════════════════════════════
-   SCHEDULE
-════════════════════════════════════════════════════ */
-function SchedulePanel({ toast, isAdmin }) {
-  const { updateSchedule } = useApp();
-  const { items, loading, refresh } = useApiList(API.getSchedule, [], updateSchedule);
-  const [editing, setEdit] = useState(null);
-  const [form, setForm]    = useState({});
-
-  const save = async () => {
-    if (!isAdmin) { toast('Admin login required', false); return; }
-    if (!form.time?.trim() || !form.session?.trim()) return;
-    try {
-      if (editing === 'new') await API.createSlot(form);
-      else await API.updateSlot(editing, form);
-      await refresh(); setEdit(null); setForm({}); toast('Saved ✓');
-    } catch (e) { toast(e.message, false); }
-  };
-
-  const del = async (itemId) => {
-    if (!confirm('Delete?')) return;
-    try { await API.deleteSlot(itemId); await refresh(); toast('Deleted'); }
-    catch (e) { toast(e.message, false); }
-  };
-
-  return (
-    <Card title="🕐 Schedule" action={<Btn sm onClick={() => { setEdit('new'); setForm({ time: '', session: '', type: 'Group', mode: 'Offline / Online', period: 'morning', duration: '60 min', suitable: 'All levels', description: '' }); }}>+ Add</Btn>}>
-      <AnimatePresence>
-        {editing !== null && (
-          <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} style={{ overflow: 'hidden', marginBottom: 10 }}>
-            <div style={{ background: T.bg, border: `1px solid ${T.bdr}`, borderRadius: 10, padding: 12 }}>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-                <Fld label="Time *" value={form.time || ''} onChange={v => setForm(p => ({ ...p, time: v }))} ph="05:30 AM" />
-                <Fld label="Session *" value={form.session || ''} onChange={v => setForm(p => ({ ...p, session: v }))} />
-              </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-                <Fld label="Type" value={form.type || ''} onChange={v => setForm(p => ({ ...p, type: v }))} />
-                <Fld label="Duration" value={form.duration || ''} onChange={v => setForm(p => ({ ...p, duration: v }))} />
-              </div>
-              <Slct label="Period" value={form.period || 'morning'} onChange={v => setForm(p => ({ ...p, period: v }))} opts={['morning', 'evening', 'night']} />
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-                <Fld label="Mode" value={form.mode || ''} onChange={v => setForm(p => ({ ...p, mode: v }))} />
-                <Fld label="Suitable For" value={form.suitable || ''} onChange={v => setForm(p => ({ ...p, suitable: v }))} />
-              </div>
-              <div style={{ display: 'flex', gap: 8 }}><Btn onClick={save} disabled={!isAdmin}>Save</Btn><Btn v="ghost" onClick={() => { setEdit(null); setForm({}); }}>Cancel</Btn></div>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-      {loading ? <Loading /> : (
-        <Tbl cols={['Time', 'Session', 'Type', 'Period', 'Duration', 'Actions']}
-          rows={items.map(s => [
-            <span key="t" style={{ color: T.gold, fontWeight: 600 }}>{s.time}</span>,
-            s.session, s.type,
-            <Tag key="p" label={s.period} color={s.period === 'morning' ? T.gold : s.period === 'evening' ? '#6ee7b7' : '#a78bfa'} />,
-            s.duration,
-            <div key="a" style={{ display: 'flex', gap: 4 }}>
-              <Btn v="ghost" sm onClick={() => { setForm({ ...s }); setEdit(id(s)); }}>Edit</Btn>
-              {isAdmin && <Btn v="danger" sm onClick={() => del(id(s))}>Del</Btn>}
-            </div>
-          ])}
-          empty="No schedule slots." />
-      )}
-    </Card>
-  );
-}
-
-/* ════════════════════════════════════════════════════
-   CONTACT + SEO + SECTIONS
-════════════════════════════════════════════════════ */
-function SitePanel({ toast, isAdmin }) {
-  const { siteContact, updateContact } = useApp();
-  const [cfg, setCfg]   = useState(null);
-  const [busy, setBusy] = useState(true);
-  const [tab, setTab]   = useState('contact');
-
-  useEffect(() => {
-    API.getSiteConfig()
-      .then(r => { setCfg(r.data); })
-      .catch(() => { setCfg({ ...siteContact, sections: {}, metaTitle: '', metaDesc: '', metaKeywords: '' }); })
-      .finally(() => setBusy(false));
   }, []); // eslint-disable-line
-
-  const set = useCallback((path, val) => {
-    setCfg(prev => {
-      const next = { ...prev };
-      const keys = path.split('.');
-      let obj = next;
-      for (let i = 0; i < keys.length - 1; i++) { obj[keys[i]] = { ...obj[keys[i]] }; obj = obj[keys[i]]; }
-      obj[keys[keys.length - 1]] = val;
-      return next;
-    });
-  }, []);
+  useEffect(()=>{load();},[load]);
 
   const save = async () => {
-    if (!isAdmin) { toast('Admin login required', false); return; }
+    if (!form.name?.trim()||!form.title?.trim()) return;
+    const body = { ...form, specialization: (form.specialization||'').split(',').map(s=>s.trim()).filter(Boolean), certifications: (form.certifications||'').split(',').map(s=>s.trim()).filter(Boolean) };
     try {
-      await API.updateSiteConfig(cfg);
-      updateContact({ ...siteContact, ...cfg });
-      toast('Saved ✓');
-    } catch (e) { toast(e.message, false); }
+      if (editing==='new') await API.createFacilitator(body); else await API.updateFacilitator(editing, body);
+      await load(); setEd(null); setForm({}); toast('Saved ✓');
+    } catch (e) { toast(e.message,false); }
   };
 
-  if (busy) return <Loading />;
+  const del = async (eid2) => {
+    if (!confirm('Delete facilitator?')) return;
+    try { await API.deleteFacilitator(eid2); await load(); toast('Deleted'); }
+    catch (e) { toast(e.message,false); }
+  };
 
-  const sections = cfg?.sections || {};
-  const SECTION_KEYS = ['home', 'about', 'facilitators', 'classes', 'plans', 'achievements', 'gallery', 'reviews', 'schedule', 'expertise', 'contact', 'membership'];
+  const openForm = (f=null) => {
+    if (f) setForm({ ...f, specialization: (f.specialization||[]).join(', '), certifications: (f.certifications||[]).join(', ') });
+    else setForm({ name:'', title:'', qualification:'', experience:'', specialization:'', certifications:'', biography:'', featured:false, isActive:true, order:0 });
+    setEd(f ? eid(f) : 'new');
+  };
 
   return (
-    <div>
-      {/* Tab bar */}
-      <div style={{ display: 'flex', gap: 4, marginBottom: 12, background: T.surf2, borderRadius: 8, padding: 3, flexWrap: 'wrap' }}>
-        {[['contact', '📞 Contact'], ['seo', '🔍 SEO'], ['sections', '👁️ Sections']].map(([k, l]) => (
-          <button key={k} onClick={() => setTab(k)}
-            style={{ padding: '4px 12px', borderRadius: 6, border: 'none', fontSize: 11, fontWeight: 600, cursor: 'pointer', background: tab === k ? T.gold : 'transparent', color: tab === k ? '#000' : T.muted }}>
-            {l}
-          </button>
-        ))}
-      </div>
-
-      {tab === 'contact' && (
-        <Card title="📞 Contact Information">
-          <Fld label="Calling Number" value={(cfg?.phones || [])[0] || ''} onChange={v => set('phones', [v])} />
-          <Fld label="WhatsApp Number" value={cfg?.whatsapp || ''} onChange={v => set('whatsapp', v)} />
-          <Fld label="Email" value={cfg?.email || ''} onChange={v => set('email', v)} ph="info@anyogainstitute.org" />
-          <Fld label="Website" value={cfg?.website || ''} onChange={v => set('website', v)} />
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-            <Fld label="Address Area" value={cfg?.address?.area || ''} onChange={v => set('address.area', v)} />
-            <Fld label="City" value={cfg?.address?.city || ''} onChange={v => set('address.city', v)} />
+    <Card title={`🧘 Facilitators (${items.length})`} action={<Btn sm onClick={()=>openForm()}>+ Add</Btn>}>
+      {editing!==null&&(
+        <div style={{ background:T.bg, border:`1px solid ${T.bdr}`, borderRadius:10, padding:12, marginBottom:12 }}>
+          <div style={{color:T.goldL,fontWeight:600,fontSize:12,marginBottom:10}}>{editing==='new'?'Add Facilitator':'Edit Facilitator'}</div>
+          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'0 10px'}}>
+            <Fld label="Name *" value={form.name||''} onChange={v=>setForm(p=>({...p,name:v}))} />
+            <Fld label="Title *" value={form.title||''} onChange={v=>setForm(p=>({...p,title:v}))} />
+            <Fld label="Qualification" value={form.qualification||''} onChange={v=>setForm(p=>({...p,qualification:v}))} />
+            <Fld label="Experience" value={form.experience||''} onChange={v=>setForm(p=>({...p,experience:v}))} />
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-            <Fld label="State" value={cfg?.address?.state || ''} onChange={v => set('address.state', v)} />
-            <Fld label="PIN Code" value={cfg?.address?.pin || ''} onChange={v => set('address.pin', v)} />
+          <Fld label="Specialization (comma-separated)" value={form.specialization||''} onChange={v=>setForm(p=>({...p,specialization:v}))} />
+          <Fld label="Certifications (comma-separated)" value={form.certifications||''} onChange={v=>setForm(p=>({...p,certifications:v}))} />
+          <Fld label="Biography" value={form.biography||''} onChange={v=>setForm(p=>({...p,biography:v}))} rows={3} />
+          <div style={{display:'flex',gap:12,marginBottom:10,fontSize:12}}>
+            <label style={{display:'flex',gap:6,cursor:'pointer',color:T.cream}}><input type="checkbox" checked={!!form.featured} onChange={e=>setForm(p=>({...p,featured:e.target.checked}))} /> Featured</label>
+            <label style={{display:'flex',gap:6,cursor:'pointer',color:T.cream}}><input type="checkbox" checked={form.isActive!==false} onChange={e=>setForm(p=>({...p,isActive:e.target.checked}))} /> Active</label>
           </div>
-          <Fld label="Google Maps URL" value={cfg?.address?.mapsUrl || ''} onChange={v => set('address.mapsUrl', v)} />
-          <Fld label="Tagline (Hindi)" value={cfg?.tagline || ''} onChange={v => set('tagline', v)} rows={2} />
-          <Fld label="Site Name" value={cfg?.siteName || ''} onChange={v => set('siteName', v)} />
-          <Btn onClick={save} disabled={!isAdmin}>Save Contact Info</Btn>
-        </Card>
+          <div style={{display:'flex',gap:6}}><Btn onClick={save}>Save</Btn><Btn v="ghost" onClick={()=>{setEd(null);setForm({});}}>Cancel</Btn></div>
+        </div>
       )}
-
-      {tab === 'seo' && (
-        <Card title="🔍 SEO Settings">
-          <Fld label="Meta Title" value={cfg?.metaTitle || ''} onChange={v => set('metaTitle', v)} ph="DIVY ASHISH YOGA SANSTHAN — Yoga Classes in Lucknow" />
-          <Fld label="Meta Description" value={cfg?.metaDesc || ''} onChange={v => set('metaDesc', v)} rows={3} ph="Yoga classes, Yogasana sports training, meditation and wellness programs in Aliganj, Lucknow." />
-          <Fld label="Keywords (comma sep.)" value={cfg?.metaKeywords || ''} onChange={v => set('metaKeywords', v)} ph="yoga classes lucknow, yogasana sports, meditation" />
-          <Btn onClick={save} disabled={!isAdmin}>Save SEO</Btn>
-        </Card>
-      )}
-
-      {tab === 'sections' && (
-        <Card title="👁️ Section Visibility">
-          <p style={{ fontSize: 11, color: T.muted, marginBottom: 12 }}>Toggle which sections are visible on the website.</p>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            {SECTION_KEYS.map(k => (
-              <div key={k} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: T.bg, border: `1px solid ${T.bdr}`, borderRadius: 8, padding: '8px 12px' }}>
-                <span style={{ color: T.cream, fontSize: 12, textTransform: 'capitalize' }}>{k}</span>
-                <button onClick={() => set(`sections.${k}`, !(sections[k] ?? true))} style={{
-                  width: 40, height: 22, borderRadius: 999, border: 'none', cursor: 'pointer',
-                  background: (sections[k] ?? true) ? T.gold : T.bdr, transition: 'background .2s', position: 'relative',
-                }}>
-                  <div style={{
-                    position: 'absolute', top: 3, left: (sections[k] ?? true) ? 20 : 3,
-                    width: 16, height: 16, borderRadius: '50%', background: '#fff', transition: 'left .2s',
-                  }} />
-                </button>
+      {busy?<Spinner/>:(
+        <div style={{display:'flex',flexDirection:'column',gap:8}}>
+          {items.map(f=>(
+            <div key={eid(f)} style={{ display:'flex', alignItems:'center', gap:10, background:T.bg, border:`1px solid ${T.bdr}`, borderRadius:8, padding:'8px 10px' }}>
+              {rImg(f.image) ? <img src={rImg(f.image)} alt={f.name} style={{width:36,height:36,borderRadius:'50%',objectFit:'cover',border:`1px solid ${T.bdr}`,flexShrink:0}} onError={e=>e.target.style.display='none'} /> : <div style={{width:36,height:36,borderRadius:'50%',background:T.surf2,flexShrink:0,display:'flex',alignItems:'center',justifyContent:'center',fontSize:16}}>🧘</div>}
+              <div style={{flex:1,minWidth:0}}>
+                <div style={{color:T.cream,fontWeight:600,fontSize:12,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{f.name}</div>
+                <div style={{color:T.muted,fontSize:10,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{f.title}</div>
               </div>
-            ))}
-          </div>
-          <Btn onClick={save} disabled={!isAdmin} style={{ marginTop: 12 }}>Save Visibility</Btn>
-          {!isAdmin && <p style={{ color: '#fca5a5', fontSize: 10, marginTop: 6 }}>⚠️ Admin login required to save section visibility</p>}
-        </Card>
+              <div style={{display:'flex',gap:3,flexShrink:0}}>
+                {f.featured&&<Tag label="⭐" color={T.gold}/>}
+                {f.isActive===false&&<Tag label="Off" color={T.muted}/>}
+                <Btn v="ghost" sm onClick={()=>openForm(f)}>Edit</Btn>
+                {isAdmin&&<Btn v="danger" sm onClick={()=>del(eid(f))}>Del</Btn>}
+              </div>
+            </div>
+          ))}
+          {items.length===0&&<div style={{color:T.muted,fontSize:12,textAlign:'center',padding:'16px 0'}}>No facilitators yet.</div>}
+        </div>
       )}
-    </div>
+    </Card>
   );
 }
 
-/* ════════════════════════════════════════════════════
-   TABS CONFIG
-════════════════════════════════════════════════════ */
-const TABS = [
-  { id: 'overview',     icon: '📊', label: 'Overview' },
-  { id: 'enquiries',   icon: '✉️',  label: 'Enquiries' },
-  { id: 'memberships', icon: '🎫', label: 'Memberships' },
-  { id: 'reviews',     icon: '⏳', label: 'Reviews' },
-  { id: 'published',   icon: '⭐', label: 'Published' },
-  { id: 'facilitators',icon: '🧘', label: 'Facilitators' },
-  { id: 'gallery',     icon: '🖼️',  label: 'Gallery' },
-  { id: 'plans',       icon: '💎', label: 'Plans' },
-  { id: 'classes',     icon: '📚', label: 'Classes' },
-  { id: 'achievements',icon: '🏆', label: 'Achievements' },
-  { id: 'schedule',    icon: '🕐', label: 'Schedule' },
-  { id: 'site',        icon: '⚙️',  label: 'Site / SEO' },
-];
+/* ─── GALLERY ────────────────────────────────────────── */
+function Gallery({ toast, isAdmin }) {
+  const { siteGallery, updateGallery } = useApp();
+  const [items, setItems] = useState(siteGallery||[]);
+  const [busy, setBusy]   = useState(false);
+  const [editing, setEd]  = useState(null);
+  const [form, setForm]   = useState({});
+  const [file, setFile]   = useState(null);
 
-/* ════════════════════════════════════════════════════
-   MAIN DASHBOARD (post-auth)
-════════════════════════════════════════════════════ */
-function Dashboard({ onClose, isAdmin }) {
-  const [tab, setTab]     = useState('overview');
-  const [toasts, setToasts] = useState([]);
-  const { pendingEnquiries, pendingMemberships, pendingReviews } = useApp();
+  const load = useCallback(async () => {
+    setBusy(true);
+    try { const r=await API.getGallery(); const d=r.data||[]; setItems(d); updateGallery(d); }
+    catch { setItems(siteGallery); }
+    setBusy(false);
+  }, []); // eslint-disable-line
+  useEffect(()=>{load();},[load]);
 
-  const addToast = useCallback((msg, ok = true) => {
-    const tid = Date.now();
-    setToasts(p => [...p, { tid, msg, ok }]);
-  }, []);
-
-  const badges = {
-    enquiries:   pendingEnquiries.filter(e => e.status === 'new' || !e.status).length,
-    memberships: pendingMemberships.filter(m => !m.status || m.status === 'pending').length,
-    reviews:     pendingReviews.length,
+  const saveNew = async () => {
+    if (!form.title?.trim()||!file) { toast('Title and image required',false); return; }
+    try {
+      const fd=new FormData(); fd.append('title',form.title); fd.append('category',form.category||'General'); fd.append('image',file);
+      await API.createGalleryItem(fd); await load(); setEd(null); setForm({}); setFile(null); toast('Uploaded ✓');
+    } catch (e) { toast(e.message,false); }
   };
 
-  const render = () => {
-    const props = { toast: addToast, isAdmin };
-    switch (tab) {
-      case 'overview':     return <OverviewPanel goTo={setTab} isAdmin={isAdmin} />;
-      case 'enquiries':    return <EnquiriesPanel   {...props} />;
-      case 'memberships':  return <MembershipsPanel {...props} />;
-      case 'reviews':
-      case 'published':    return <ReviewsPanel     {...props} />;
-      case 'facilitators': return <FacilitatorsPanel {...props} />;
-      case 'gallery':      return <GalleryPanel      {...props} />;
-      case 'plans':        return <PlansPanel         {...props} />;
-      case 'classes':      return <ClassesPanel       {...props} />;
-      case 'achievements': return <AchievementsPanel  {...props} />;
-      case 'schedule':     return <SchedulePanel      {...props} />;
-      case 'site':         return <SitePanel          {...props} />;
-      default: return null;
-    }
+  const del = async (eid2) => {
+    if (!confirm('Delete?')) return;
+    try { await API.deleteGalleryItem(eid2); await load(); toast('Deleted'); }
+    catch (e) { toast(e.message,false); }
   };
 
   return (
-    <div style={{ display: 'flex', height: '100%', overflow: 'hidden' }}>
-      {/* Sidebar */}
-      <div style={{ width: 130, background: T.surf, borderRight: `1px solid ${T.bdr}`, display: 'flex', flexDirection: 'column', flexShrink: 0, overflowY: 'auto' }}>
-        <div style={{ padding: '12px 8px', borderBottom: `1px solid ${T.bdr}`, textAlign: 'center' }}>
-          <img src="/images/logo.png" alt="Logo" style={{ width: 30, height: 30, borderRadius: '50%', objectFit: 'cover', border: `1px solid ${T.gold}44`, display: 'block', margin: '0 auto 4px' }} />
-          <div style={{ color: T.gold, fontSize: 9, fontWeight: 700 }}>DAYS Admin</div>
-          {isAdmin && <div style={{ color: '#6ee7b7', fontSize: 8, marginTop: 2 }}>● MongoDB Live</div>}
-          {!isAdmin && <div style={{ color: '#fca5a5', fontSize: 8, marginTop: 2 }}>○ Offline Mode</div>}
+    <Card title={`🖼️ Gallery (${items.length})`} action={<Btn sm onClick={()=>{setForm({title:'',category:'General'});setEd('new');}}>+ Upload</Btn>}>
+      {editing==='new'&&(
+        <div style={{ background:T.bg, border:`1px solid ${T.bdr}`, borderRadius:10, padding:12, marginBottom:12 }}>
+          <Fld label="Title *" value={form.title||''} onChange={v=>setForm(p=>({...p,title:v}))} />
+          <Fld label="Category" value={form.category||''} onChange={v=>setForm(p=>({...p,category:v}))} />
+          <div style={{marginBottom:10}}>
+            <div style={{fontSize:10,color:T.muted,textTransform:'uppercase',letterSpacing:'.06em',marginBottom:3}}>Image *</div>
+            <input type="file" accept="image/*" onChange={e=>setFile(e.target.files[0])} style={{color:T.cream,fontSize:11}} />
+          </div>
+          <div style={{display:'flex',gap:6}}><Btn onClick={saveNew}>Upload</Btn><Btn v="ghost" onClick={()=>{setEd(null);setForm({});setFile(null);}}>Cancel</Btn></div>
         </div>
-        <nav style={{ flex: 1, padding: '4px 0' }}>
-          {TABS.map(t => (
-            <button key={t.id} onClick={() => setTab(t.id)} style={{
-              display: 'flex', alignItems: 'center', gap: 5, width: '100%',
-              padding: '6px 8px', background: 'none',
-              borderLeft: `2px solid ${tab === t.id ? T.gold : 'transparent'}`,
-              backgroundColor: tab === t.id ? `${T.gold}11` : 'transparent',
-              color: tab === t.id ? T.gold : T.muted,
-              fontSize: 10, fontWeight: 500, cursor: 'pointer', textAlign: 'left',
-              transition: 'all .15s', position: 'relative',
-            }}>
-              <span style={{ fontSize: 12 }}>{t.icon}</span>
-              {t.label}
-              {badges[t.id] > 0 && (
-                <span style={{ marginLeft: 'auto', background: 'rgba(192,57,43,.8)', color: '#fff', borderRadius: 999, fontSize: 8, padding: '1px 4px', fontWeight: 700 }}>
-                  {badges[t.id]}
-                </span>
-              )}
-            </button>
+      )}
+      {busy?<Spinner/>:(
+        <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:6}}>
+          {items.map(g=>(
+            <div key={eid(g)} style={{position:'relative',borderRadius:8,overflow:'hidden',border:`1px solid ${T.bdr}`,aspectRatio:'1',background:T.surf2}}>
+              {rImg(typeof g.image==='string'?g.image:null)?<img src={rImg(typeof g.image==='string'?g.image:null)} alt={g.title} style={{width:'100%',height:'100%',objectFit:'cover'}} />:<div style={{width:'100%',height:'100%',display:'flex',alignItems:'center',justifyContent:'center',fontSize:24}}>🖼️</div>}
+              <div style={{position:'absolute',bottom:0,left:0,right:0,background:'rgba(0,0,0,.7)',padding:'4px 6px',display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+                <span style={{color:T.cream,fontSize:9,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',flex:1}}>{g.title}</span>
+                {isAdmin&&<button onClick={()=>del(eid(g))} style={{background:'none',border:'none',color:'#fca5a5',fontSize:11,cursor:'pointer',flexShrink:0}}>✕</button>}
+              </div>
+            </div>
           ))}
-        </nav>
-        <div style={{ padding: 8, borderTop: `1px solid ${T.bdr}` }}>
-          <button onClick={onClose} style={{ width: '100%', padding: '5px 0', background: 'transparent', border: `1px solid ${T.bdr}`, borderRadius: 8, color: T.muted, fontSize: 9, cursor: 'pointer' }}>
-            Close ✕
-          </button>
+          {items.length===0&&<div style={{gridColumn:'1/-1',color:T.muted,fontSize:12,textAlign:'center',padding:'16px 0'}}>No gallery items.</div>}
         </div>
-      </div>
-
-      {/* Content */}
-      <div style={{ flex: 1, overflowY: 'auto', padding: 14 }}>
-        <AnimatePresence mode="wait">
-          <motion.div key={tab} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: .15 }}>
-            {render()}
-          </motion.div>
-        </AnimatePresence>
-      </div>
-
-      {/* Toasts */}
-      <AnimatePresence>
-        {toasts.map(t => <Toast key={t.tid} msg={t.msg} ok={t.ok} onDone={() => setToasts(p => p.filter(x => x.tid !== t.tid))} />)}
-      </AnimatePresence>
-    </div>
+      )}
+    </Card>
   );
 }
 
-/* ════════════════════════════════════════════════════
-   ROOT EXPORT
-════════════════════════════════════════════════════ */
-export default function InAppDashboard() {
-  const { dashOpen, setDashOpen, dashUnlocked, unlockDash } = useApp();
-  const [isAdmin, setIsAdmin] = useState(false);
+/* ─── CLASSES ────────────────────────────────────────── */
+function Classes({ toast, isAdmin }) {
+  const { siteClasses, updateClasses } = useApp();
+  const [items, setItems] = useState(siteClasses||[]);
+  const [busy, setBusy]   = useState(false);
+  const [editing, setEd]  = useState(null);
+  const [form, setForm]   = useState({});
 
-  // Check if already logged in as admin
+  const load = useCallback(async () => {
+    setBusy(true);
+    try { const r=await API.getClasses(); const d=r.data||[]; setItems(d); updateClasses(d); }
+    catch { setItems(siteClasses); }
+    setBusy(false);
+  }, []); // eslint-disable-line
+  useEffect(()=>{load();},[load]);
+
+  const save = async () => {
+    if (!form.title?.trim()) return;
+    try {
+      const body={...form, suitableFor:(form.suitableFor||'').split(',').map(s=>s.trim()).filter(Boolean)};
+      if (editing==='new') await API.createClass(body); else await API.updateClass(editing,body);
+      await load(); setEd(null); setForm({}); toast('Saved ✓');
+    } catch (e) { toast(e.message,false); }
+  };
+
+  const del = async (eid2) => {
+    if (!confirm('Delete?')) return;
+    try { await API.deleteClass(eid2); await load(); toast('Deleted'); }
+    catch (e) { toast(e.message,false); }
+  };
+
+  const openForm = (c=null) => {
+    setForm(c ? {...c, suitableFor:(c.suitableFor||[]).join(', ')} : {title:'',category:'Offline',mode:'Group',description:'',price:'',timing:'',icon:'🧘',suitableFor:'',isActive:true});
+    setEd(c?eid(c):'new');
+  };
+
+  return (
+    <Card title={`📚 Classes (${items.length})`} action={<Btn sm onClick={()=>openForm()}>+ Add</Btn>}>
+      {editing!==null&&(
+        <div style={{ background:T.bg, border:`1px solid ${T.bdr}`, borderRadius:10, padding:12, marginBottom:12 }}>
+          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'0 10px'}}>
+            <Fld label="Title *" value={form.title||''} onChange={v=>setForm(p=>({...p,title:v}))} />
+            <Fld label="Icon" value={form.icon||''} onChange={v=>setForm(p=>({...p,icon:v}))} />
+            <Sel label="Category" value={form.category||'Offline'} onChange={v=>setForm(p=>({...p,category:v}))} opts={['Offline','Online']} />
+            <Sel label="Mode" value={form.mode||'Group'} onChange={v=>setForm(p=>({...p,mode:v}))} opts={['Group','Personal']} />
+            <Fld label="Price" value={form.price||''} onChange={v=>setForm(p=>({...p,price:v}))} />
+            <Fld label="Timing" value={form.timing||''} onChange={v=>setForm(p=>({...p,timing:v}))} />
+          </div>
+          <Fld label="Description" value={form.description||''} onChange={v=>setForm(p=>({...p,description:v}))} rows={2} />
+          <Fld label="Suitable For (comma-separated)" value={form.suitableFor||''} onChange={v=>setForm(p=>({...p,suitableFor:v}))} />
+          <label style={{display:'flex',gap:6,cursor:'pointer',color:T.cream,fontSize:12,marginBottom:10}}><input type="checkbox" checked={form.isActive!==false} onChange={e=>setForm(p=>({...p,isActive:e.target.checked}))} /> Active</label>
+          <div style={{display:'flex',gap:6}}><Btn onClick={save}>Save</Btn><Btn v="ghost" onClick={()=>{setEd(null);setForm({});}}>Cancel</Btn></div>
+        </div>
+      )}
+      {busy?<Spinner/>:<Tbl cols={['Icon','Title','Category','Mode','Price','Act']} rows={items.map(c=>[c.icon||'🧘',c.title,c.category,c.mode,c.price,<div key="a" style={{display:'flex',gap:3}}><Btn v="ghost" sm onClick={()=>openForm(c)}>Edit</Btn>{isAdmin&&<Btn v="danger" sm onClick={()=>del(eid(c))}>Del</Btn>}</div>])} empty="No classes yet." />}
+    </Card>
+  );
+}
+
+/* ─── PLANS ──────────────────────────────────────────── */
+function Plans({ toast, isAdmin }) {
+  const { sitePlans, updatePlans } = useApp();
+  const [items, setItems] = useState(sitePlans||[]);
+  const [busy, setBusy]   = useState(false);
+  const [editing, setEd]  = useState(null);
+  const [form, setForm]   = useState({});
+
+  const load = useCallback(async () => {
+    setBusy(true);
+    try { const r=await API.getPlans(); const d=r.data||[]; setItems(d); updatePlans(d); }
+    catch { setItems(sitePlans); }
+    setBusy(false);
+  }, []); // eslint-disable-line
+  useEffect(()=>{load();},[load]);
+
+  const save = async () => {
+    if (!form.name?.trim()||!form.price?.trim()) return;
+    try {
+      const body={...form, benefits:(form.benefits||'').split('\n').map(s=>s.trim()).filter(Boolean)};
+      if (editing==='new') await API.createPlan(body); else await API.updatePlan(editing,body);
+      await load(); setEd(null); setForm({}); toast('Saved ✓');
+    } catch (e) { toast(e.message,false); }
+  };
+
+  const del = async (eid2) => {
+    if (!confirm('Delete?')) return;
+    try { await API.deletePlan(eid2); await load(); toast('Deleted'); }
+    catch (e) { toast(e.message,false); }
+  };
+
+  const openForm = (p=null) => {
+    setForm(p?{...p,benefits:(p.benefits||[]).join('\n')}:{name:'',subtitle:'',price:'',mode:'',cta:'Get Started',benefits:'',popular:false,isActive:true});
+    setEd(p?eid(p):'new');
+  };
+
+  return (
+    <Card title={`💎 Plans (${items.length})`} action={<Btn sm onClick={()=>openForm()}>+ Add</Btn>}>
+      {editing!==null&&(
+        <div style={{ background:T.bg, border:`1px solid ${T.bdr}`, borderRadius:10, padding:12, marginBottom:12 }}>
+          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'0 10px'}}>
+            <Fld label="Name *" value={form.name||''} onChange={v=>setForm(p=>({...p,name:v}))} />
+            <Fld label="Price *" value={form.price||''} onChange={v=>setForm(p=>({...p,price:v}))} />
+            <Fld label="Subtitle" value={form.subtitle||''} onChange={v=>setForm(p=>({...p,subtitle:v}))} />
+            <Fld label="Mode" value={form.mode||''} onChange={v=>setForm(p=>({...p,mode:v}))} />
+            <Fld label="CTA Button" value={form.cta||''} onChange={v=>setForm(p=>({...p,cta:v}))} />
+          </div>
+          <Fld label="Benefits (one per line)" value={form.benefits||''} onChange={v=>setForm(p=>({...p,benefits:v}))} rows={4} />
+          <div style={{display:'flex',gap:12,marginBottom:10,fontSize:12}}>
+            <label style={{display:'flex',gap:6,cursor:'pointer',color:T.cream}}><input type="checkbox" checked={!!form.popular} onChange={e=>setForm(p=>({...p,popular:e.target.checked}))} /> Popular</label>
+            <label style={{display:'flex',gap:6,cursor:'pointer',color:T.cream}}><input type="checkbox" checked={form.isActive!==false} onChange={e=>setForm(p=>({...p,isActive:e.target.checked}))} /> Active</label>
+          </div>
+          <div style={{display:'flex',gap:6}}><Btn onClick={save}>Save</Btn><Btn v="ghost" onClick={()=>{setEd(null);setForm({});}}>Cancel</Btn></div>
+        </div>
+      )}
+      {busy?<Spinner/>:<Tbl cols={['Name','Price','Mode','Popular','Act']} rows={items.map(p=>[p.name,p.price,p.mode,p.popular?'⭐':'—',<div key="a" style={{display:'flex',gap:3}}><Btn v="ghost" sm onClick={()=>openForm(p)}>Edit</Btn>{isAdmin&&<Btn v="danger" sm onClick={()=>del(eid(p))}>Del</Btn>}</div>])} empty="No plans yet." />}
+    </Card>
+  );
+}
+
+/* ─── ACHIEVEMENTS ───────────────────────────────────── */
+function Achievements({ toast, isAdmin }) {
+  const { siteAchievements, updateAchievements } = useApp();
+  const [items, setItems] = useState(siteAchievements||[]);
+  const [busy, setBusy]   = useState(false);
+  const [editing, setEd]  = useState(null);
+  const [form, setForm]   = useState({});
+
+  const load = useCallback(async () => {
+    setBusy(true);
+    try { const r=await API.getAchievements(); const d=r.data||[]; setItems(d); updateAchievements(d); }
+    catch { setItems(siteAchievements); }
+    setBusy(false);
+  }, []); // eslint-disable-line
+  useEffect(()=>{load();},[load]);
+
+  const LEVELS = ['District','State','National','Championship','Certification','Judge / Observer'];
+
+  const save = async () => {
+    if (!form.title?.trim()||!form.year?.trim()) return;
+    try {
+      if (editing==='new') await API.createAchievement(form); else await API.updateAchievement(editing,form);
+      await load(); setEd(null); setForm({}); toast('Saved ✓');
+    } catch (e) { toast(e.message,false); }
+  };
+
+  const del = async (eid2) => {
+    if (!confirm('Delete?')) return;
+    try { await API.deleteAchievement(eid2); await load(); toast('Deleted'); }
+    catch (e) { toast(e.message,false); }
+  };
+
+  const openForm = (a=null) => {
+    setForm(a||{title:'',level:'State',year:new Date().getFullYear().toString(),location:'',position:'',description:'',icon:'🏆',isActive:true});
+    setEd(a?eid(a):'new');
+  };
+
+  return (
+    <Card title={`🏆 Achievements (${items.length})`} action={<Btn sm onClick={()=>openForm()}>+ Add</Btn>}>
+      {editing!==null&&(
+        <div style={{ background:T.bg, border:`1px solid ${T.bdr}`, borderRadius:10, padding:12, marginBottom:12 }}>
+          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'0 10px'}}>
+            <Fld label="Title *" value={form.title||''} onChange={v=>setForm(p=>({...p,title:v}))} />
+            <Fld label="Year *" value={form.year||''} onChange={v=>setForm(p=>({...p,year:v}))} />
+            <Sel label="Level" value={form.level||'State'} onChange={v=>setForm(p=>({...p,level:v}))} opts={LEVELS} />
+            <Fld label="Icon" value={form.icon||''} onChange={v=>setForm(p=>({...p,icon:v}))} />
+            <Fld label="Position / Rank" value={form.position||''} onChange={v=>setForm(p=>({...p,position:v}))} />
+            <Fld label="Location" value={form.location||''} onChange={v=>setForm(p=>({...p,location:v}))} />
+          </div>
+          <Fld label="Description" value={form.description||''} onChange={v=>setForm(p=>({...p,description:v}))} rows={2} />
+          <div style={{display:'flex',gap:6}}><Btn onClick={save}>Save</Btn><Btn v="ghost" onClick={()=>{setEd(null);setForm({});}}>Cancel</Btn></div>
+        </div>
+      )}
+      {busy?<Spinner/>:<Tbl cols={['Icon','Title','Level','Year','Position','Act']} rows={items.map(a=>[a.icon||'🏆',a.title,a.level,a.year,a.position||'—',<div key="a" style={{display:'flex',gap:3}}><Btn v="ghost" sm onClick={()=>openForm(a)}>Edit</Btn>{isAdmin&&<Btn v="danger" sm onClick={()=>del(eid(a))}>Del</Btn>}</div>])} empty="No achievements yet." />}
+    </Card>
+  );
+}
+
+/* ─── SCHEDULE ───────────────────────────────────────── */
+function Schedule({ toast, isAdmin }) {
+  const { siteSchedule, updateSchedule } = useApp();
+  const [items, setItems] = useState(siteSchedule||[]);
+  const [busy, setBusy]   = useState(false);
+  const [editing, setEd]  = useState(null);
+  const [form, setForm]   = useState({});
+
+  const load = useCallback(async () => {
+    setBusy(true);
+    try { const r=await API.getSchedule(); const d=r.data||[]; setItems(d); updateSchedule(d); }
+    catch { setItems(siteSchedule); }
+    setBusy(false);
+  }, []); // eslint-disable-line
+  useEffect(()=>{load();},[load]);
+
+  const save = async () => {
+    if (!form.time?.trim()||!form.session?.trim()) return;
+    try {
+      if (editing==='new') await API.createSlot(form); else await API.updateSlot(editing,form);
+      await load(); setEd(null); setForm({}); toast('Saved ✓');
+    } catch (e) { toast(e.message,false); }
+  };
+
+  const del = async (eid2) => {
+    if (!confirm('Delete?')) return;
+    try { await API.deleteSlot(eid2); await load(); toast('Deleted'); }
+    catch (e) { toast(e.message,false); }
+  };
+
+  const openForm = (s=null) => {
+    setForm(s||{time:'',session:'',type:'Group',mode:'Offline',period:'morning',duration:'60 min',suitable:'All levels',isActive:true});
+    setEd(s?eid(s):'new');
+  };
+
+  return (
+    <Card title={`🕐 Schedule (${items.length} slots)`} action={<Btn sm onClick={()=>openForm()}>+ Add</Btn>}>
+      {editing!==null&&(
+        <div style={{ background:T.bg, border:`1px solid ${T.bdr}`, borderRadius:10, padding:12, marginBottom:12 }}>
+          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'0 10px'}}>
+            <Fld label="Time *" value={form.time||''} onChange={v=>setForm(p=>({...p,time:v}))} ph="e.g. 06:00 AM" />
+            <Fld label="Session Name *" value={form.session||''} onChange={v=>setForm(p=>({...p,session:v}))} />
+            <Fld label="Type" value={form.type||''} onChange={v=>setForm(p=>({...p,type:v}))} />
+            <Fld label="Mode" value={form.mode||''} onChange={v=>setForm(p=>({...p,mode:v}))} />
+            <Sel label="Period" value={form.period||'morning'} onChange={v=>setForm(p=>({...p,period:v}))} opts={[{v:'morning',l:'Morning'},{v:'evening',l:'Evening'},{v:'night',l:'Night'}]} />
+            <Fld label="Duration" value={form.duration||''} onChange={v=>setForm(p=>({...p,duration:v}))} />
+          </div>
+          <Fld label="Suitable For" value={form.suitable||''} onChange={v=>setForm(p=>({...p,suitable:v}))} />
+          <label style={{display:'flex',gap:6,cursor:'pointer',color:T.cream,fontSize:12,marginBottom:10}}><input type="checkbox" checked={form.isActive!==false} onChange={e=>setForm(p=>({...p,isActive:e.target.checked}))} /> Active</label>
+          <div style={{display:'flex',gap:6}}><Btn onClick={save}>Save</Btn><Btn v="ghost" onClick={()=>{setEd(null);setForm({});}}>Cancel</Btn></div>
+        </div>
+      )}
+      {busy?<Spinner/>:<Tbl cols={['Time','Session','Type','Period','Duration','Act']} rows={items.map(s=>[s.time,s.session,s.type,s.period,s.duration,<div key="a" style={{display:'flex',gap:3}}><Btn v="ghost" sm onClick={()=>openForm(s)}>Edit</Btn>{isAdmin&&<Btn v="danger" sm onClick={()=>del(eid(s))}>Del</Btn>}</div>])} empty="No schedule slots yet." />}
+    </Card>
+  );
+}
+
+/* ─── SITE CONFIG ────────────────────────────────────── */
+function SiteConfig({ toast, isAdmin }) {
+  const { siteContact, updateContact } = useApp();
+  const [form, setForm] = useState({ siteName:'', tagline:'', phones:'', whatsapp:'', website:'' });
+  const [busy, setBusy] = useState(false);
+
   useEffect(() => {
-    const token = API.getToken();
-    if (token) API.getMe().then(() => setIsAdmin(true)).catch(() => { API.clearToken(); setIsAdmin(false); });
-  }, []);
+    if (siteContact) {
+      setForm({
+        siteName:  siteContact.siteName || siteContact.name || '',
+        tagline:   siteContact.tagline  || '',
+        phones:    (siteContact.phones  || []).join(', '),
+        whatsapp:  siteContact.whatsapp || '',
+        website:   siteContact.website  || '',
+      });
+    }
+  }, [siteContact]);
 
-  const handleUnlock = useCallback((adminMode) => {
-    unlockDash();
-    setIsAdmin(adminMode);
-  }, [unlockDash]);
+  const save = async () => {
+    setBusy(true);
+    try {
+      const body = { siteName:form.siteName, tagline:form.tagline, phones:form.phones.split(',').map(s=>s.trim()).filter(Boolean), whatsapp:form.whatsapp, website:form.website };
+      if (isAdmin) await API.updateSiteConfig(body);
+      updateContact({ ...siteContact, ...body });
+      toast('Config saved ✓');
+    } catch (e) { toast(e.message,false); }
+    setBusy(false);
+  };
+
+  return (
+    <Card title="⚙️ Site Configuration">
+      <Fld label="Site Name" value={form.siteName} onChange={v=>setForm(p=>({...p,siteName:v}))} />
+      <Fld label="Tagline" value={form.tagline} onChange={v=>setForm(p=>({...p,tagline:v}))} />
+      <Fld label="Phone Numbers (comma-separated)" value={form.phones} onChange={v=>setForm(p=>({...p,phones:v}))} />
+      <Fld label="WhatsApp Number" value={form.whatsapp} onChange={v=>setForm(p=>({...p,whatsapp:v}))} />
+      <Fld label="Website URL" value={form.website} onChange={v=>setForm(p=>({...p,website:v}))} />
+      <Btn onClick={save} disabled={busy} full>{busy?'Saving…':'Save Changes'}</Btn>
+      {!isAdmin&&<p style={{color:'#fca5a5',fontSize:10,marginTop:8}}>⚠️ Offline mode — changes saved locally only.</p>}
+    </Card>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════
+   MAIN InAppDashboard
+═══════════════════════════════════════════════════════ */
+export default function InAppDashboard() {
+  const { dashOpen, setDashOpen } = useApp();
+  const [authed, setAuthed]   = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [section, setSection] = useState('overview');
+  const [toast, setToast]     = useState(null);
+
+  // Auto-restore admin session
+  useEffect(() => {
+    if (dashOpen && !authed) {
+      const token = API.getToken();
+      if (token) {
+        API.getMe().then(d => {
+          if (d?.user?.role === 'admin') { setIsAdmin(true); setAuthed(true); }
+          else { API.clearToken(); }
+        }).catch(() => { API.clearToken(); });
+      }
+    }
+  }, [dashOpen, authed]);
+
+  const showToast = useCallback((msg, ok = true) => setToast({ msg, ok }), []);
+  const goTo = useCallback((s) => setSection(s), []);
+
+  const close = () => { setDashOpen(false); };
 
   if (!dashOpen) return null;
 
+  const panelProps = { toast: showToast, isAdmin };
+
   return (
-    <AnimatePresence>
-      <motion.div key="dash-overlay" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-        style={{ position: 'fixed', inset: 0, zIndex: 9000, background: 'rgba(2,5,3,.65)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}
-        onClick={e => { if (e.target === e.currentTarget) setDashOpen(false); }}>
-        <motion.div initial={{ scale: .93, opacity: 0, y: 20 }} animate={{ scale: 1, opacity: 1, y: 0 }} exit={{ scale: .93, opacity: 0 }}
-          transition={{ type: 'spring', stiffness: 260, damping: 22 }}
-          style={{ width: '100%', maxWidth: 940, height: dashUnlocked ? '88vh' : 'auto', background: T.bg, border: `1px solid ${T.bdr}`, borderRadius: 16, overflow: 'hidden', boxShadow: '0 24px 80px rgba(0,0,0,.7)', display: 'flex', flexDirection: 'column', fontFamily: "'Segoe UI', system-ui, sans-serif" }}>
-          {!dashUnlocked
-            ? <AuthGate onUnlock={handleUnlock} onClose={() => setDashOpen(false)} />
-            : <Dashboard onClose={() => setDashOpen(false)} isAdmin={isAdmin} />
-          }
-        </motion.div>
+    <>
+      <AnimatePresence>
+        {dashOpen && (
+          <motion.div
+            key="dash-overlay"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={close}
+            style={{ position:'fixed', inset:0, background:'rgba(0,0,0,.55)', zIndex:9000, backdropFilter:'blur(3px)' }}
+          />
+        )}
+      </AnimatePresence>
+
+      <motion.div
+        key="dash-panel"
+        initial={{ x: '100%', opacity: 0 }}
+        animate={{ x: 0, opacity: 1 }}
+        exit={{ x: '100%', opacity: 0 }}
+        transition={{ type: 'spring', stiffness: 260, damping: 28 }}
+        style={{
+          position: 'fixed', top: 0, right: 0, bottom: 0, zIndex: 9001,
+          width: 'min(420px, 100vw)',
+          background: T.bg,
+          borderLeft: `1px solid ${T.bdr}`,
+          display: 'flex', flexDirection: 'column',
+          fontFamily: "'Segoe UI', system-ui, sans-serif",
+          boxShadow: '-8px 0 40px rgba(0,0,0,.6)',
+        }}
+      >
+        {/* ── Top bar ── */}
+        <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'14px 16px', borderBottom:`1px solid ${T.bdr}`, background:T.surf, flexShrink:0 }}>
+          <div style={{ display:'flex', alignItems:'center', gap:10 }}>
+            <img src="/images/logo.png" alt="" style={{ width:30, height:30, borderRadius:'50%', objectFit:'cover', border:`1px solid ${T.gold}44` }} />
+            <div>
+              <div style={{ color:T.goldL, fontWeight:700, fontSize:13, lineHeight:1.2 }}>DAYS Admin</div>
+              <div style={{ color:T.muted, fontSize:9, textTransform:'uppercase', letterSpacing:'.06em' }}>
+                {isAdmin ? '🟢 MongoDB Connected' : '🟡 Offline / Local'}
+              </div>
+            </div>
+          </div>
+          <div style={{ display:'flex', gap:6, alignItems:'center' }}>
+            {authed && isAdmin && (
+              <button onClick={()=>{API.clearToken();setAuthed(false);setIsAdmin(false);}} style={{ background:'none', border:`1px solid ${T.bdr}`, borderRadius:6, padding:'3px 8px', color:T.muted, fontSize:10, cursor:'pointer' }}>Sign Out</button>
+            )}
+            <button onClick={close} style={{ background:'none', border:`1px solid ${T.bdr}`, borderRadius:6, padding:'4px 8px', color:T.cream, fontSize:16, cursor:'pointer', lineHeight:1 }}>✕</button>
+          </div>
+        </div>
+
+        {/* ── Auth gate ── */}
+        {!authed ? (
+          <div style={{ flex:1, overflowY:'auto' }}>
+            <AuthGate onUnlock={(admin) => { setIsAdmin(admin); setAuthed(true); }} onClose={close} />
+          </div>
+        ) : (
+          <>
+            {/* ── Section nav (horizontal scroll) ── */}
+            <div style={{ display:'flex', gap:4, padding:'8px 10px', borderBottom:`1px solid ${T.bdr}`, overflowX:'auto', flexShrink:0, scrollbarWidth:'none' }}>
+              {SECTIONS.map(s => (
+                <button key={s.id} onClick={()=>setSection(s.id)} style={{
+                  display:'flex', flexDirection:'column', alignItems:'center', gap:2,
+                  padding:'5px 10px', borderRadius:8, border:'none',
+                  background: section===s.id ? T.gold+'22' : 'transparent',
+                  borderBottom: section===s.id ? `2px solid ${T.gold}` : '2px solid transparent',
+                  color: section===s.id ? T.goldL : T.muted,
+                  cursor:'pointer', fontSize:9, fontWeight:600, textTransform:'uppercase',
+                  letterSpacing:'.06em', whiteSpace:'nowrap', flexShrink:0,
+                  transition:'all .15s',
+                }}>
+                  <span style={{ fontSize:16 }}>{s.icon}</span>
+                  {s.label}
+                </button>
+              ))}
+            </div>
+
+            {/* ── Content ── */}
+            <div style={{ flex:1, overflowY:'auto', padding:'12px 12px', scrollbarWidth:'thin', scrollbarColor:`${T.bdr} transparent` }}>
+              {section==='overview'     && <Overview      goTo={goTo} isAdmin={isAdmin} />}
+              {section==='enquiries'    && <Enquiries     {...panelProps} />}
+              {section==='memberships'  && <Memberships   {...panelProps} />}
+              {section==='payments'     && <Payments      {...panelProps} />}
+              {section==='reviews'      && <Reviews       {...panelProps} />}
+              {section==='facilitators' && <Facilitators  {...panelProps} />}
+              {section==='gallery'      && <Gallery       {...panelProps} />}
+              {section==='classes'      && <Classes       {...panelProps} />}
+              {section==='plans'        && <Plans         {...panelProps} />}
+              {section==='achievements' && <Achievements  {...panelProps} />}
+              {section==='schedule'     && <Schedule      {...panelProps} />}
+              {section==='config'       && <SiteConfig    {...panelProps} />}
+            </div>
+          </>
+        )}
       </motion.div>
-    </AnimatePresence>
+
+      {/* Toast */}
+      <AnimatePresence>
+        {toast && <Toast key="toast" msg={toast.msg} ok={toast.ok} onDone={()=>setToast(null)} />}
+      </AnimatePresence>
+    </>
   );
 }

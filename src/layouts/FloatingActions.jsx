@@ -22,7 +22,7 @@ export default function FloatingActions() {
     const next = tapCount + 1;
     setTapCount(next);
     if (tapTimer) clearTimeout(tapTimer);
-    if (next >= 5) { setTapCount(0); setDashOpen(true); return; }
+    if (next >= 2) { setTapCount(0); setDashOpen(true); return; }
     setTapTimer(setTimeout(() => setTapCount(0), 2000));
   };
 
