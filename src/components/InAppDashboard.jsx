@@ -1009,20 +1009,33 @@ export default function InAppDashboard() {
 
       <motion.div
         key="dash-panel"
-        initial={{ x: '100%', opacity: 0 }}
-        animate={{ x: 0, opacity: 1 }}
-        exit={{ x: '100%', opacity: 0 }}
+        initial={{ opacity: 0, scale: 0.95, y: 20 }}
+        animate={{ opacity: 1, scale: 1,    y: 0 }}
+        exit={{ opacity: 0, scale: 0.95, y: 20 }}
         transition={{ type: 'spring', stiffness: 260, damping: 28 }}
         style={{
-          position: 'fixed', top: 0, right: 0, bottom: 0, zIndex: 9001,
-          width: 'min(420px, 100vw)',
-          background: T.bg,
-          borderLeft: `1px solid ${T.bdr}`,
-          display: 'flex', flexDirection: 'column',
-          fontFamily: "'Segoe UI', system-ui, sans-serif",
-          boxShadow: '-8px 0 40px rgba(0,0,0,.6)',
+          position: 'fixed', inset: 0, zIndex: 9001,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          padding: '12px',
+          pointerEvents: 'none',  // let overlay clicks fall through
         }}
       >
+        {/* Inner panel — stops click propagation */}
+        <div
+          onClick={e => e.stopPropagation()}
+          style={{
+            width: '100%', maxWidth: 900,
+            height: '100%', maxHeight: 'calc(100vh - 24px)',
+            background: T.bg,
+            border: `1px solid ${T.bdr}`,
+            borderRadius: 16,
+            display: 'flex', flexDirection: 'column',
+            fontFamily: "'Segoe UI', system-ui, sans-serif",
+            boxShadow: '0 24px 80px rgba(0,0,0,.7)',
+            pointerEvents: 'auto',
+            overflow: 'hidden',
+          }}
+        >
         {/* ── Top bar ── */}
         <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'14px 16px', borderBottom:`1px solid ${T.bdr}`, background:T.surf, flexShrink:0 }}>
           <div style={{ display:'flex', alignItems:'center', gap:10 }}>
@@ -1050,7 +1063,7 @@ export default function InAppDashboard() {
         ) : (
           <>
             {/* ── Section nav (horizontal scroll) ── */}
-            <div style={{ display:'flex', gap:4, padding:'8px 10px', borderBottom:`1px solid ${T.bdr}`, overflowX:'auto', flexShrink:0, scrollbarWidth:'none' }}>
+            <div style={{ display:'flex', gap:4, padding:'8px 12px', borderBottom:`1px solid ${T.bdr}`, overflowX:'auto', flexShrink:0, scrollbarWidth:'none', flexWrap:'wrap' }}>
               {SECTIONS.map(s => (
                 <button key={s.id} onClick={()=>setSection(s.id)} style={{
                   display:'flex', flexDirection:'column', alignItems:'center', gap:2,
@@ -1069,7 +1082,7 @@ export default function InAppDashboard() {
             </div>
 
             {/* ── Content ── */}
-            <div style={{ flex:1, overflowY:'auto', padding:'12px 12px', scrollbarWidth:'thin', scrollbarColor:`${T.bdr} transparent` }}>
+            <div style={{ flex:1, overflowY:'auto', padding:'16px 20px', scrollbarWidth:'thin', scrollbarColor:`${T.bdr} transparent` }}>
               {section==='overview'     && <Overview      goTo={goTo} isAdmin={isAdmin} />}
               {section==='enquiries'    && <Enquiries     {...panelProps} />}
               {section==='memberships'  && <Memberships   {...panelProps} />}
@@ -1085,6 +1098,7 @@ export default function InAppDashboard() {
             </div>
           </>
         )}
+        </div>
       </motion.div>
 
       {/* Toast */}
