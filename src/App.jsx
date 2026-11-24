@@ -9,6 +9,7 @@ import FloatingActions from './layouts/FloatingActions';
 import PageTransition from './layouts/PageTransition';
 import BuddhaLoader from './components/BuddhaLoader';
 import InAppDashboard from './components/InAppDashboard';
+import ScrollToTop from './components/ScrollToTop';
 
 // ── Lazy-loaded pages ──────────────────────────────────────────────────────
 const Home         = lazy(() => import('./pages/Home'));
@@ -74,7 +75,9 @@ function AppRoutes() {
   const location = useLocation();
 
   return (
-    <AppLayout>
+    <>
+      <ScrollToTop />
+      <AppLayout>
       <Suspense fallback={<PageLoader />}>
         <PageTransition>
           <Routes location={location} key={location.pathname}>
@@ -94,6 +97,7 @@ function AppRoutes() {
         </PageTransition>
       </Suspense>
     </AppLayout>
+    </>
   );
 }
 
