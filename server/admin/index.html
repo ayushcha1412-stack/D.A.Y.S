@@ -165,6 +165,7 @@ tr:hover td{background:var(--surface2)}
         <div class="nav-item"        data-page="plans"       onclick="goTo('plans')">      <span class="nav-icon">💎</span>  Plans</div>
         <div class="nav-item"        data-page="achievements"onclick="goTo('achievements')"><span class="nav-icon">🏆</span> Achievements</div>
         <div class="nav-item"        data-page="schedule"    onclick="goTo('schedule')">   <span class="nav-icon">🕐</span>  Schedule</div>
+        <div class="nav-item"        data-page="payments"    onclick="goTo('payments')">   <span class="nav-icon">💳</span>  Payments    <span class="nav-badge" id="nb-pay" style="display:none"></span></div>
         <div class="nav-item"        data-page="config"      onclick="goTo('config')">     <span class="nav-icon">⚙️</span>  Site Config</div>
       </nav>
       <div class="sidebar-footer">
@@ -309,7 +310,7 @@ const PAGE_TITLES = {
   dashboard:'Dashboard', enquiries:'Enquiries', memberships:'Memberships',
   reviews:'Reviews', facilitators:'Facilitators', gallery:'Gallery',
   classes:'Classes', plans:'Plans', achievements:'Achievements',
-  schedule:'Schedule', config:'Site Config',
+  schedule:'Schedule', config:'Site Config', payments:'Payments',
 };
 
 function goTo(page) {
@@ -319,7 +320,7 @@ function goTo(page) {
     dashboard:renderDashboard, enquiries:renderEnquiries, memberships:renderMemberships,
     reviews:renderReviews, facilitators:renderFacilitators, gallery:renderGallery,
     classes:renderClasses, plans:renderPlans, achievements:renderAchievements,
-    schedule:renderSchedule, config:renderConfig,
+    schedule:renderSchedule, config:renderConfig, payments:renderPayments,
   };
   (map[page] || (() => {}))();
 }
@@ -369,6 +370,7 @@ async function renderDashboard() {
           <button class="btn btn-ghost btn-sm" onclick="goTo('achievements')">🏆 Achievements</button>
           <button class="btn btn-ghost btn-sm" onclick="goTo('schedule')">🕐 Schedule</button>
           <button class="btn btn-ghost btn-sm" onclick="goTo('config')">⚙️ Site Config</button>
+          <button class="btn btn-ghost btn-sm" onclick="goTo('payments')">💳 Payments</button>
         </div>
       </div>`;
   } catch(e) {
@@ -1251,6 +1253,91 @@ async function saveSocial() {
     toast('Saved ✓');
     closeModal();
     renderConfig();
+  } catch(e) { toast(e.message, false); }
+}
+
+/* ════════════════════════════════════════
+   PAYMENTS
+════════════════════════════════════════ */
+async function renderPayments() {
+  document.getElementById('content').innerHTML = '<p class="text-muted text-sm" style="padding:1rem">Loading…</p>';
+  try {
+    const { data } = await api('/payment/list');
+    const pending = data.filter(p => p.status === 'created').length;
+    setBadge('nb-pay', pending);
+    document.getElementById('content').innerHTML = `
+      <div class="card">
+        <div class="card-header">
+          <h3>UPI Payments (${data.length})</h3>
+          <span class="text-muted text-sm">UPI ID: ashishku325@okhdfcbank</span>
+        </div>
+        <div class="table-wrap"><table>
+          <thead><tr><th>Date</th><th>Name</th><th>Phone</th><th>Plan</th><th>Amount</th><th>Status</th><th>UTR</th><th>Actions</th></tr></thead>
+          <tbody>${data.length ? data.map(p => `
+            <tr>
+              <td class="text-muted">${fmt(p.createdAt)}</td>
+              <td>${esc(p.name)}</td>
+              <td>${esc(p.phone)}</td>
+              <td class="text-muted" style="max-width:140px;white-space:normal">${esc(p.planLabel)}</td>
+              <td class="text-gold font-bold">₹${p.amountRupees}</td>
+              <td>${payTag(p.status)}</td>
+              <td class="text-muted">${esc(p.utrNumber || '—')}</td>
+              <td class="actions">
+                ${p.status === 'created' ? `<button class="btn btn-success btn-sm" onclick="confirmPayment('${p.orderId}')">✓ Confirm</button>` : ''}
+                <button class="btn btn-ghost btn-sm" onclick="viewPayment(${JSON.stringify(p).replace(/"/g,'&quot;')})">View</button>
+              </td>
+            </tr>`).join('') : '<tr><td colspan="8" class="empty">No payments yet.</td></tr>'}</tbody>
+        </table></div>
+      </div>`;
+  } catch(e) {
+    document.getElementById('content').innerHTML = `<p class="err" style="padding:1rem">${esc(e.message)}</p>`;
+  }
+}
+
+function payTag(s) {
+  const m = { created:'tag-pending', paid:'tag-active', failed:'tag-no', expired:'tag-closed' };
+  return `<span class="tag ${m[s]||'tag-new'}">${esc(s)}</span>`;
+}
+
+function viewPayment(p) {
+  openModal(`Payment — ${esc(p.name)}`, `
+    <p class="text-sm mb1"><strong>${esc(p.name)}</strong> · ${esc(p.phone)}</p>
+    <p class="text-sm text-muted mb1">Plan: ${esc(p.planLabel)} · Duration: ${esc(p.duration)}</p>
+    <p class="text-sm mb1">Amount: <strong class="text-gold">₹${p.amountRupees}</strong> · Status: ${payTag(p.status)}</p>
+    <p class="text-sm text-muted mb1">Order ID: ${esc(p.orderId)}</p>
+    ${p.utrNumber ? `<p class="text-sm mb1">UTR: <strong>${esc(p.utrNumber)}</strong></p>` : ''}
+    ${p.timing ? `<p class="text-sm text-muted mb1">Preferred timing: ${esc(p.timing)}</p>` : ''}
+    <hr class="divider"/>
+    ${p.status === 'created' ? `
+    <div class="form-group"><label>UTR / Transaction Reference *</label>
+      <input id="utr-input" placeholder="e.g. 123456789012" style="font-family:monospace"/>
+      <div class="err" id="utr-err"></div>
+    </div>` : ''}`,
+    p.status === 'created' ? `
+      <button class="btn btn-success" onclick="confirmPaymentModal('${esc(p.orderId)}')">✓ Confirm Payment</button>
+      <button class="btn btn-ghost" onclick="closeModal()">Close</button>` :
+      `<button class="btn btn-ghost" onclick="closeModal()">Close</button>`
+  );
+}
+
+async function confirmPayment(orderId) {
+  const utr = prompt('Enter UTR / Transaction Reference number:');
+  if (!utr?.trim()) return;
+  try {
+    await api('/payment/confirm', 'POST', { orderId, utrNumber: utr.trim() });
+    toast('Payment confirmed ✓');
+    renderPayments();
+  } catch(e) { toast(e.message, false); }
+}
+
+async function confirmPaymentModal(orderId) {
+  const utr = document.getElementById('utr-input')?.value?.trim();
+  if (!utr) { document.getElementById('utr-err').textContent = 'UTR is required'; return; }
+  try {
+    await api('/payment/confirm', 'POST', { orderId, utrNumber: utr });
+    toast('Payment confirmed ✓');
+    closeModal();
+    renderPayments();
   } catch(e) { toast(e.message, false); }
 }
 

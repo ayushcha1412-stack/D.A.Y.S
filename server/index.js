@@ -21,6 +21,7 @@ const enquiryRoutes      = require('./routes/enquiries');
 const membershipRoutes   = require('./routes/memberships');
 const scheduleRoutes     = require('./routes/schedule');
 const configRoutes       = require('./routes/config');
+const paymentRoutes      = require('./routes/payment');
 
 const app  = express();
 const PORT = process.env.PORT || 5000;
@@ -107,6 +108,7 @@ app.use('/api/contact',      enquiryRoutes);
 app.use('/api/membership',   membershipRoutes);
 app.use('/api/schedule',     scheduleRoutes);
 app.use('/api/config',       configRoutes);
+app.use('/api/payment',      paymentRoutes);
 
 // ── Error handling ───────────────────────────────────────
 app.use(notFound);
