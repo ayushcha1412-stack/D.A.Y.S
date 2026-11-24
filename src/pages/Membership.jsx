@@ -43,7 +43,7 @@ const STEPS = [
   { id: 1, label: 'Personal Info',   icon: <User size={18} /> },
   { id: 2, label: 'Yoga Preference', icon: <Heart size={18} /> },
   { id: 3, label: 'Membership',      icon: <CreditCard size={18} /> },
-  { id: 4, label: 'Confirmation',    icon: <CheckCircle size={18} /> },
+  { id: 4, label: 'Pay & Confirm',   icon: <CheckCircle size={18} /> },
 ];
 
 const benefits = [
@@ -194,6 +194,7 @@ export default function Membership() {
   const [step, setStep]           = useState(1);
   const [errors, setErrors]       = useState({});
   const [submitted, setSubmitted] = useState(false);
+  const [showPaymentQR, setShowPaymentQR] = useState(false); // show QR on step 4
 
   // Trial flow
   const [selectedTrials, setSelectedTrials] = useState([]);
@@ -219,12 +220,18 @@ export default function Membership() {
   };
   const handleBack = () => { setErrors({}); if (step > 1) setStep(step - 1); };
 
-  const handleSubmit = () => {
+  // Called when user clicks "Pay Now" on Step 4 — opens the QR modal
+  const handlePayNow = () => { setShowPaymentQR(true); };
+
+  // Called by PaymentQR after admin confirms / payment verified
+  const handlePaymentSuccess = (orderId) => {
+    setShowPaymentQR(false);
     addMembership({
       id: Date.now(), name: data.name, phone: data.phone, age: data.age,
       gender: data.gender || '', email: data.email || '',
       level: data.level, mode: data.mode, goals: data.goals || [],
-      membershipType: data.membershipType, status: 'pending',
+      membershipType: data.membershipType, status: 'active',
+      orderId,
       date: new Date().toISOString(),
     });
     setSubmitted(true);
@@ -247,13 +254,14 @@ export default function Membership() {
           </motion.h2>
           <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.4 }}
             className="text-cream/60 text-base mb-6 leading-relaxed">
-            Thank you for joining DIVY ASHISH YOGA SANSTHAN (AN YOGA INSTITUTE).<br />
-            We will contact you shortly to confirm your membership details.
+            Payment received. You are now registered with<br />
+            <strong className="text-gold">DIVY ASHISH YOGA SANSTHAN (AN YOGA INSTITUTE).</strong><br />
+            Our team will contact you to confirm your first session.
           </motion.p>
           <motion.a initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.55 }}
-            href={`https://wa.me/91${siteContact?.whatsapp || '8127227284'}?text=Namaste! I have just registered for membership at DIVY ASHISH YOGA SANSTHAN.`}
+            href={`https://wa.me/91${siteContact?.whatsapp || '8127227284'}?text=Namaste! I have completed my membership registration and payment at DIVY ASHISH YOGA SANSTHAN.`}
             target="_blank" rel="noopener noreferrer" className="btn-primary inline-flex">
-            Confirm on WhatsApp
+            Chat on WhatsApp
           </motion.a>
         </div>
       </motion.main>
@@ -598,10 +606,11 @@ export default function Membership() {
               </StepWrapper>
             )}
 
-            {/* Step 4 */}
+            {/* Step 4 — Pay & Confirm */}
             {step === 4 && (
-              <StepWrapper key="s4" title="Confirm Registration">
-                <div className="space-y-3 mb-6">
+              <StepWrapper key="s4" title="Review & Pay">
+                {/* Summary rows */}
+                <div className="space-y-2 mb-5">
                   {[
                     { label: 'Name',       value: data.name },
                     { label: 'Phone',      value: data.phone },
@@ -617,29 +626,75 @@ export default function Membership() {
                     </div>
                   ))}
                 </div>
-                <p className="text-cream/40 text-xs leading-relaxed mb-5">
-                  By submitting, you agree to be contacted by DIVY ASHISH YOGA SANSTHAN to confirm your registration.
+
+                {/* Payment summary box */}
+                <div className="rounded-xl border border-gold/20 overflow-hidden mb-5"
+                  style={{ background: 'rgba(212,168,67,0.05)' }}>
+                  <div className="px-4 py-2.5 border-b border-gold/12">
+                    <p className="text-gold/60 text-[10px] uppercase tracking-widest">Payment Summary</p>
+                  </div>
+                  <div className="px-4 py-3">
+                    <div className="flex justify-between text-sm py-1">
+                      <span className="text-cream/55">Annual Registration Fee</span>
+                      <span className="text-cream/80 font-medium">₹567</span>
+                    </div>
+                    <div className="flex justify-between pt-2 border-t border-gold/12 mt-1">
+                      <span className="text-gold/80 font-bold text-xs uppercase tracking-wide">Total Payable</span>
+                      <span className="text-gold font-bold text-lg font-serif">₹567</span>
+                    </div>
+                  </div>
+                </div>
+
+                <p className="text-cream/35 text-xs leading-relaxed mb-5">
+                  Complete your payment via UPI QR code. Registration is confirmed only after successful payment.
                 </p>
-                <button onClick={handleSubmit} className="btn-primary w-full justify-center">
-                  <Send size={15} /> Complete Registration
+
+                {/* Pay button — opens QR */}
+                <button onClick={handlePayNow} className="btn-primary w-full justify-center py-3 text-sm">
+                  <Send size={15} /> Pay ₹567 via UPI
                 </button>
               </StepWrapper>
             )}
           </AnimatePresence>
 
-          {step < 4 && (
-            <div className="flex justify-between mt-6 pt-6 border-t border-gold/10">
-              <button onClick={handleBack} disabled={step === 1}
-                className="flex items-center gap-1.5 px-5 py-2.5 rounded-full border border-gold/25 text-cream/60 text-sm hover:border-gold/50 hover:text-cream disabled:opacity-30 disabled:cursor-not-allowed transition-all">
-                <ChevronLeft size={15} /> Back
-              </button>
+          {/* Back button always visible on steps 2-4; Next only on steps 1-3 */}
+          <div className="flex justify-between mt-6 pt-6 border-t border-gold/10">
+            <button onClick={handleBack} disabled={step === 1}
+              className="flex items-center gap-1.5 px-5 py-2.5 rounded-full border border-gold/25 text-cream/60 text-sm hover:border-gold/50 hover:text-cream disabled:opacity-30 disabled:cursor-not-allowed transition-all">
+              <ChevronLeft size={15} /> Back
+            </button>
+            {step < 4 && (
               <button onClick={handleNext} className="btn-primary text-sm py-2.5 px-6">
                 {step === 3 ? 'Review' : 'Next'} <ChevronRight size={15} />
               </button>
-            </div>
-          )}
+            )}
+          </div>
         </MysticalCard>
       </section>
+
+      {/* ── Membership Annual Registration — PaymentQR modal ── */}
+      <AnimatePresence>
+        {showPaymentQR && (
+          <PaymentQR
+            plan={{
+              id:       'annual',
+              label:    'Annual Registration — DIVY ASHISH YOGA SANSTHAN',
+              duration: '1 Year',
+              price:    567,
+            }}
+            booking={{
+              name:   data.name   || '',
+              phone:  data.phone  || '',
+              timing: data.mode   || '',
+            }}
+            breakdown={[
+              { label: 'Annual Registration Fee', amount: 567 },
+            ]}
+            onSuccess={handlePaymentSuccess}
+            onClose={() => setShowPaymentQR(false)}
+          />
+        )}
+      </AnimatePresence>
 
       {/* ── Trial booking flow modal ── */}
       <AnimatePresence>
