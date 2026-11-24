@@ -15,23 +15,15 @@ import { useApp } from '../context/AppContext';
    DATA
 ════════════════════════════════════════ */
 
-// Regular membership — monthly option removed as requested
+// Regular membership — annual only
 const MEMBERSHIP_TYPES = [
   {
     id: 'annual',
     label: 'Annual Registration',
-    price: '₹367/year',
-    rawPrice: 367,
+    price: '₹567/year',
+    rawPrice: 567,
     badge: 'Best Value',
     desc: 'Non-refundable annual registration fee.',
-  },
-  {
-    id: 'monthly',
-    label: 'Monthly Membership',
-    price: 'From ₹499',
-    rawPrice: 499,
-    badge: '17% off first month',
-    desc: 'New members get 17% off in their first month.',
   },
 ];
 
@@ -363,7 +355,7 @@ export default function Membership() {
           sanskrit="सदस्यता"
           title="Join Our Yoga"
           titleHighlight="Community"
-          description="Choose the plan that fits your journey — a one-time annual registration, monthly membership, or start with an introductory trial session."
+          description="Choose the plan that fits your journey — a one-time annual registration of ₹567/year, or start with an introductory trial session."
         />
       </section>
 
